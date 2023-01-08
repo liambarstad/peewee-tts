@@ -4,6 +4,20 @@ import librosa
 from torch.utils.data import Dataset
 
 class SpeakerAudioDataset(Dataset):
+    def __init__(self, 
+                 root_dir, 
+                 sample_rate, 
+                 n_fft,
+                 hop_length,
+                 win_length,
+                 n_mels):
+        
+        self.root_dir = root_dir
+        
+    def __getitem__(self, idx):
+        pass
+'''
+class SpeakerAudioDataset(Dataset):
     def __init__(self, root_dir, sample_rate, mel_params):
         self.root_dir = root_dir
         self.sample_rate = sample_rate
@@ -34,3 +48,4 @@ class SpeakerAudioDataset(Dataset):
         y, _ = librosa.load(f'{self.root_dir}/{utterance[0]}/{utterance[1]}/{"_".join(utterance)}')
         mel_spec = librosa.feature.melspectrogram(y, sr=self.sample_rate, **self.mel_params)
         return utterance[0], mel_spec.swapaxes(0, 1)
+'''

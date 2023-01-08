@@ -1,0 +1,2 @@
+class MelSpec:
+    pass

@@ -1,0 +1,2 @@
+class ClipShuffle:
+    pass

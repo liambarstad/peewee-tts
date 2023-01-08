@@ -2,7 +2,7 @@ from datasets import SpeakerAudioDataset
 from dataloaders import SpeakerAudioDataLoader
 from models import SpeakerVerificationLSTMEncoder
 from transforms import MelSpec, ClipShuffle
-import transforms.transform_utils
+from transforms.transform_utils import ToTensor
 
 sample_rate = 22050
 mel_params = {
@@ -16,11 +16,12 @@ mel_params = {
 train_params = {
     'N_speakers': 64,
     'M_utterances': 10,
+    'root_dir': '../data/utterance_corpuses',
     'sources': {
         'LibriTTS': {
             'version': 'dev-clean'
         }
-    }
+    },
 }
 
 model_params = {
@@ -31,4 +32,20 @@ model_params = {
     'num_layers': 3
 }
 
+clip_params = {}
+
 batch_size = train_params['N_speakers'] / train_params['M_utterances']
+
+dataset = SpeakerAudioDataset(
+        root_dir=train_params['root_dir'],
+        sources=train_params['sources'],
+        transforms=[
+            MelSpec(**mel_params),
+            ClipShuffle(**clip_params),
+            ToTensor()
+        ]
+)
+
+print(len(dataset))
+print(dataset.num_speakers())
+print(dataset[0])

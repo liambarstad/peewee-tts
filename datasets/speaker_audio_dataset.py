@@ -48,7 +48,7 @@ class SpeakerAudioDataset(Dataset):
         info = self.paths.iloc[idx]  
         data, _ = librosa.load(info.path)
         values = (info.speaker_id, data)
-        for transform in self.transforms:
-            values = transform(values)
+        if self.transform:
+            values = self.transform(values)
         return values
 

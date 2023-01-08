@@ -2,4 +2,4 @@
 *.ipynb_checkpoints
 *__pycache__
 data/*
-Real-Time-Voice-Cloning/
+vendor/*

@@ -10,7 +10,6 @@ sample_rate = 22050
 window_len_ms = 25
 hop_len_ms = 10
 
-
 mel_params = {
     'sample_rate': sample_rate,
     'hop_length_ms': 10,
@@ -26,7 +25,7 @@ clip_params = {
 train_params = {
     'N_speakers': 64,
     'M_utterances': 10,
-    'root_dir': '../data/utterance_corpuses',
+    'root_dir': 'data/utterance_corpuses',
     'sources': {
         'LibriTTS': {
             'version': 'dev-clean'
@@ -41,7 +40,6 @@ model_params = {
     'embedding_size': 256,
     'num_layers': 3
 }
-
 
 batch_size = train_params['N_speakers'] / train_params['M_utterances']
 
@@ -88,14 +86,13 @@ for epoch in range(epochs):
       
     cks = torch.Tensor(256,                                                                                                                                 
     [
-        torch.init_some_shit_here(embedding_dims)
+        torch.init_some_stuff_here(embedding_dims)
         for speaker in total_speakers
     ]
                                                                                                                                        
     for i, (speaker, audio) in enumerate(dataloader):
         embed = model(audio)
                                                                                                                                        
-        
         # get batch_size examples
         # forward/backwards + update
         # if i % 5 == 0 (ex):

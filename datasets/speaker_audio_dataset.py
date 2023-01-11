@@ -8,12 +8,12 @@ class SpeakerAudioDataset(Dataset):
     def __init__(self, 
                  root_dir: str, 
                  sources: dict,
-                 transforms=[]
+                 transform,
                  ):
         
         self.root_dir = root_dir
         self.sources = sources
-        self.transforms = transforms
+        self.transform = transform
 
         self.paths = pd.DataFrame([], columns=['dataset', 'speaker', 'path', 'speaker_id'])
 

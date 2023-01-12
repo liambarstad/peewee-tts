@@ -1,3 +1,4 @@
+import numpy as np
 from librosa.feature import melspectrogram
 
 class MelSpec:
@@ -16,14 +17,18 @@ class MelSpec:
         self.mel_params = kwargs
 
     def _to_frames(self, ms):
-        return int((self.sample_rate / 1000) * ms)
+        samples_per_millisecond = 0.001 * self.sample_rate
+        return int(samples_per_millisecond * ms)
 
     def __call__(self, data):
-        spec = melspectrogram(data[1], 
+        specs = [
+            melspectrogram(
+                partial_utterance, 
                 sr=self.sample_rate,
                 n_fft=self.n_fft,
                 hop_length=self.hop_length,
                 n_mels=self.n_mels,
                 **self.mel_params
-                ) 
-        return data[0], spec
+            ) for partial_utterance in data[1]
+        ]
+        return data[0], np.array(specs)

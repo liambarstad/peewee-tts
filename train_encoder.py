@@ -19,6 +19,7 @@ mel_params = {
 
 clip_params = {
     'sample_rate': sample_rate,
+    'win_length_ms': 25,
     'fixed_length_ms': 800,
 }
 
@@ -47,32 +48,35 @@ dataset = SpeakerAudioDataset(
         root_dir=train_params['root_dir'],
         sources=train_params['sources'],
         transform=Compose([
+            ClipShuffle(**clip_params),
             MelSpec(**mel_params),
-            #ClipShuffle(**clip_params),
-            #ToTensor()
         ])
-)
+    )
 
-print(len(dataset))
-print(dataset.num_speakers())
-print(dataset[0])
+#print(len(dataset))
+#print(dataset.num_speakers())
+#print(dataset[0])
+
+dataloader = SpeakerAudioDataLoader(dataset, 
+        batch_size=64, 
+        m_utterances=train
+        collate_fn=collate)
+
+
+
+for i, (speaker, audio) in enumerate(dataloader):
+    print(i, (speaker, audio))
+    break
 
 '''
-from torch.utils.data import DataLoader
-
-dataloader = DataLoader(dataset, batch_size=64, shuffle=True)
 dataloader = SpeakerAudioDataLoader(
     dataset, 
-    #train_params['N_speakers'], 
-    #train_params['M_utterances'], 
-    batch_size=64
-    shuffle=True
+    train_params['N_speakers'], 
+    train_params['M_utterances'], 
+    800
 )
-'''
 
-#print(next(iter(dataloader)))
 
-'''
 # transforms ToTensor
 
 epochs = 3

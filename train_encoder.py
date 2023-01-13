@@ -1,6 +1,6 @@
 import math
 from datasets import SpeakerAudioDataset
-from dataloaders import SpeakerAudioDataLoader
+from torch.utils.data import DataLoader
 from models import SpeakerVerificationLSTMEncoder
 from transforms import MelSpec, ClipShuffle
 from transforms.transform_utils import ToTensor
@@ -18,13 +18,11 @@ mel_params = {
 }
 
 clip_params = {
-    'sample_rate': sample_rate,
-    'win_length_ms': 25,
-    'fixed_length_ms': 800,
+    't': 160
 }
 
 train_params = {
-    'N_speakers': 64,
+    'N_speakers': 6,
     'M_utterances': 10,
     'root_dir': 'data/utterance_corpuses',
     'sources': {
@@ -42,65 +40,55 @@ model_params = {
     'num_layers': 3
 }
 
-batch_size = train_params['N_speakers'] / train_params['M_utterances']
-
 dataset = SpeakerAudioDataset(
         root_dir=train_params['root_dir'],
         sources=train_params['sources'],
+        m_utterances=train_params['M_utterances'],
         transform=Compose([
-            ClipShuffle(**clip_params),
+            # convert to mel spectrogram
             MelSpec(**mel_params),
+            # split into clips with length t
+            ClipShuffle(**clip_params),
         ])
     )
 
-#print(len(dataset))
-#print(dataset.num_speakers())
-#print(dataset[0])
+dataloader = DataLoader(dataset, batch_size=train_params['N_speakers'], shuffle=True) 
 
-dataloader = SpeakerAudioDataLoader(dataset, 
-        batch_size=64, 
-        m_utterances=train
-        collate_fn=collate)
-
-
-
-for i, (speaker, audio) in enumerate(dataloader):
-    print(i, (speaker, audio))
-    break
-
-'''
-dataloader = SpeakerAudioDataLoader(
-    dataset, 
-    train_params['N_speakers'], 
-    train_params['M_utterances'], 
-    800
-)
-
-
-# transforms ToTensor
-
-epochs = 3
-total_samples = len(dataset)
-total_speakers = dataset.num_speakers()
-n_iterations = math.ceil(total_samples / batch_size)
-
+epochs = 1
 model = SpeakerVerificationLSTMEncoder(**model_params)
 
+import torch
+
 for epoch in range(epochs):
-      
-    cks = torch.Tensor(256,                                                                                                                                 
-    [
-        torch.init_some_stuff_here(embedding_dims)
-        for speaker in total_speakers
-    ]
-                                                                                                                                       
-    for i, (speaker, audio) in enumerate(dataloader):
-        embed = model(audio)
-                                                                                                                                       
+
+    #cks = torch.Tensor()
+
+    for i, (speakers, data) in enumerate(dataloader):
+
+        # needs to take average
+
+        num_samples = train_params['N_speakers'] * train_params['M_utterances']
+
+        batch = data.reshape(
+                num_samples,
+                clip_params['t'],
+                mel_params['n_mels']
+                )
+
+        labels = speakers.reshape(num_samples)
+
+        predictions = model(batch.float())
+
+        # does the order matter for the samples in the same batch?
+        # is reshaping t and n_mels correct?
+
+        import ipdb; ipdb.set_trace()
+
         # get batch_size examples
         # forward/backwards + update
         # if i % 5 == 0 (ex):
         #     print/visualize/progress
         #     e.g. epoch, step, input_size, graph, convergence
-        
-'''
+
+        break
+

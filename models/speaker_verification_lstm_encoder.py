@@ -33,8 +33,6 @@ class SpeakerVerificationLSTMEncoder(nn.Module):
         self.relu = nn.ReLU()
 
     def forward(self, x):
-        # (64, 636, 80)
-
         # lstm with projection
         _, (hx, cx) = self.lstm(x)
 

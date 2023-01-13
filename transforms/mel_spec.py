@@ -23,12 +23,12 @@ class MelSpec:
     def __call__(self, data):
         specs = [
             melspectrogram(
-                partial_utterance, 
+                utterance, 
                 sr=self.sample_rate,
                 n_fft=self.n_fft,
                 hop_length=self.hop_length,
                 n_mels=self.n_mels,
                 **self.mel_params
-            ) for partial_utterance in data[1]
+            ) for utterance in data
         ]
-        return data[0], np.array(specs)
+        return specs

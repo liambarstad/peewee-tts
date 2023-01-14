@@ -1,65 +1,39 @@
+import mlflow
 import math
+import torch
+import argparse
 from datasets import SpeakerAudioDataset
 from torch.utils.data import DataLoader
 from models import SpeakerVerificationLSTMEncoder
 from transforms import MelSpec, ClipShuffle
 from transforms.transform_utils import ToTensor
 from torchvision.transforms import Compose
+from utils import Params
 
-sample_rate = 22050
-window_len_ms = 25
-hop_len_ms = 10
+parser = argparse.ArgumentParser(description='Trains the speaker recognition encoder, generating embeddings for different speakers')
+parser.add_argument('--config_path', type=str, help='path to config .yml file')
+args = parser.parse_args().__dict__
 
-mel_params = {
-    'sample_rate': sample_rate,
-    'hop_length_ms': 10,
-    'win_length_ms': 25,
-    'n_mels': 80
-}
-
-clip_params = {
-    't': 160
-}
-
-train_params = {
-    'N_speakers': 6,
-    'M_utterances': 10,
-    'root_dir': 'data/utterance_corpuses',
-    'sources': {
-        'LibriTTS': {
-            'version': 'dev-clean'
-        }
-    },
-}
-
-model_params = {
-    'input_size': 80,
-    'hidden_size': 257,
-    'projection_size': 256,
-    'embedding_size': 256,
-    'num_layers': 3
-}
+params = Params(args['config_path'])
 
 dataset = SpeakerAudioDataset(
-        root_dir=train_params['root_dir'],
-        sources=train_params['sources'],
-        m_utterances=train_params['M_utterances'],
+        root_dir=params.train['root_dir'],
+        sources=params.train['sources'],
+        m_utterances=params.train['M_utterances'],
         transform=Compose([
             # convert to mel spectrogram
-            MelSpec(**mel_params),
+            MelSpec(**params.mel),
             # split into clips with length t
-            ClipShuffle(**clip_params),
+            ClipShuffle(**params.clip),
         ])
     )
 
-dataloader = DataLoader(dataset, batch_size=train_params['N_speakers'], shuffle=True) 
+dataloader = DataLoader(dataset, batch_size=params.train['N_speakers'], shuffle=params.train['shuffle']) 
 
-epochs = 1
-model = SpeakerVerificationLSTMEncoder(**model_params)
+model = SpeakerVerificationLSTMEncoder(**params.model)
 
-import torch
 
-for epoch in range(epochs):
+for epoch in range(params.train['epochs']):
 
     #cks = torch.Tensor()
 
@@ -67,12 +41,12 @@ for epoch in range(epochs):
 
         # needs to take average
 
-        num_samples = train_params['N_speakers'] * train_params['M_utterances']
+        num_samples = params.train['N_speakers'] * params.train['M_utterances']
 
         batch = data.reshape(
                 num_samples,
-                clip_params['t'],
-                mel_params['n_mels']
+                params.clip['t'],
+                params.mel['n_mels']
                 )
 
         labels = speakers.reshape(num_samples)

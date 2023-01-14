@@ -1,0 +1,14 @@
+name: pee_wee_tts
+
+dependencies:
+  - python=3.8.15
+  - pip=22.2.2
+  - torchvision==0.13.1
+  - numpy==1.20.3
+  - pandas==1.5.2
+  - pyyaml==6.0
+  - pip:
+    - mlflow==2.1.1
+    - librosa==0.8.1
+    - ipdb==0.13.11
+    - torch==1.12.1 

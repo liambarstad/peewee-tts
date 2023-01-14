@@ -1,0 +1,9 @@
+name: PeeWeeTTS
+
+conda_env: conda.yaml
+
+entry_points:
+  train_encoder:
+    parameters: 
+      config_path: { type: string, default: "config/speaker_recog_encoder_dev.yml" }
+    command: "python train_encoder.py config_path={config_path}"

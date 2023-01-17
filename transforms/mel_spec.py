@@ -22,13 +22,14 @@ class MelSpec:
 
     def __call__(self, data):
         specs = [
-            melspectrogram(
+            np.transpose(
+                melspectrogram(
                 utterance, 
                 sr=self.sample_rate,
                 n_fft=self.n_fft,
                 hop_length=self.hop_length,
                 n_mels=self.n_mels,
                 **self.mel_params
-            ) for utterance in data
+            )) for utterance in data
         ]
         return specs

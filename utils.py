@@ -11,3 +11,23 @@ class Params:
                 for param in parameters:
                     mlflow.log_param(f'{section}_{param}', parameters[param])
 
+class SpeakerCentroids:
+    def __init__(self, cks={}):
+        # computes the running centroids of each speaker
+        self.cks = cks
+
+    def append_data(self, speaker_id, eji):
+        if speaker_id in self.cks:
+            speaker_id = str(speaker_id)
+            num_samples = self.cks[speaker_id][0]
+            total_weight = self.cks[speaker_id][1]
+            self.cks[speaker_id] = [ num_samples + 1, eji ]
+        else:
+            self.cks[str(speaker_id)] = [ 1, eji ]
+
+    def get_for_speaker(self, speaker_id):
+        speaker_id = str(speaker_id)
+        num_samples = self.cks[speaker_id][0]
+        total_weight = self.cks[speaker_id][1]
+        return total_weight / num_samples
+

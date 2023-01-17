@@ -8,6 +8,8 @@ clip:
   t: 160
 
 train:
+  epochs: 3
+  learning_rate: 0.01
   N_speakers: 6
   M_utterances: 10
   shuffle: true
@@ -15,7 +17,6 @@ train:
   sources: 
     LibriTTS:
       version: dev-clean
-  epochs: 1
 
 model:
   input_size: 80

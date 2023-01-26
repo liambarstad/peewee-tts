@@ -41,12 +41,6 @@ optimizer = torch.optim.Adam(model.parameters(), lr=params.train['learning_rate'
 for epoch in range(params.train['epochs']):
     for i, (speakers, data) in enumerate(dataloader):
 
-        # 80, 160
-        # [ 80 ] ...160
-        # [ 160 ] ...80
-        # transpose
-
-        import ipdb; ipdb.sset_trace()
         batch = data.reshape(-1, params.clip['t'], params.mel['n_mels']).to(device)
 
         labels = speakers.reshape(batch.shape[0]).to(device)
@@ -70,18 +64,22 @@ for epoch in range(params.train['epochs']):
             [ j_centroids[(j + i) % len(j_centroids)] for i in range(len(speakers) - 1) ]
             for j in range(len(j_centroids)) 
         ])
-    
-        j_centroids = j_centroids.reshape(-1, 1, j_centroids.shape[1])
-        predictions = predictions.reshape(-1, 1, predictions.shape[1])
 
+        # forward pass
         loss = model.criterion(predictions, j_centroids, k_centroids)
         optimizer.zero_grad()
-        loss.backward()
+        loss.sum().backward()
 
         # TODO: decrease by half at every 30M steps
         optimizer.step()
-            
-        print(f'epoch: {epoch+1}/{params.train["epochs"]}, step: {i+1}, loss: {loss.item()}')
+
+        # log metrics
+        #   loss
+        #   pca of each centroid
+        #   euclidian distance between centroid and pred
+        #   avg euclidian distance between other centroids and pred
+    
+        print(f'epoch: {epoch+1}/{params.train["epochs"]}, step: {i+1}, loss: {loss.sum() / len(loss)}')
 
         #     e.g. epoch, step, input_size, graph, convergence
 

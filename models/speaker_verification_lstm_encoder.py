@@ -8,6 +8,7 @@ class SpeakerVerificationLSTMEncoder(nn.Module):
                  hidden_size,
                  projection_size,
                  embedding_size,
+                 batch_size,
                  num_layers
                 ):
         super(SpeakerVerificationLSTMEncoder, self).__init__()
@@ -16,6 +17,7 @@ class SpeakerVerificationLSTMEncoder(nn.Module):
         self.projection_size = projection_size
         self.embedding_size = embedding_size
         self.num_layers = num_layers
+        self.batch_size = batch_size
 
         self.lstm = nn.LSTM(
             self.input_size,
@@ -32,10 +34,10 @@ class SpeakerVerificationLSTMEncoder(nn.Module):
 
         self.relu = nn.ReLU()
 
-        self.W = 0 
+        self.W = nn.Parameter(torch.Tensor([10]))
         # contstrain to be > 0
 
-        self.B = 0 
+        self.B = nn.Parameter(torch.Tensor([5]))
 
     def forward(self, x):
         # lstm with projection
@@ -51,18 +53,22 @@ class SpeakerVerificationLSTMEncoder(nn.Module):
 
 
     def criterion(self, predictions, j_centroids, k_centroids):
-        softmax = nn.Softmax()
-        cos_similarity = nn.CosineSimilarity()
+        j_centroids = torch.tensor(j_centroids)
+        k_centroids = torch.tensor(k_centroids)
+        # should grad = False for j and k ?
 
-        import ipdb; ipdb.sset_trace()
-        #Sji = softmax(model.W * cos_similarity(predictions, j_centroids) + model.B)
-        #Sjk = softmax(model.W *  
-        #return (-1 * Sji) + log(sum(exp(Sjk)))
-        # y[:, 0] == Sji y[:, 1:] == Sjk
+        softmax = nn.Softmax(dim=0)
+        cos_similarity_j = nn.CosineSimilarity(dim=1)
 
-        #loss(eji) = 1 row in predictions
-        #loss(eji) = -soft_mean(j) + log(sum(exp(k)))
-        # predictions = predicted for 60 samples
-        # y = centroid embedding, labels for 60 samples
-        #return softmax(self.W * cos_similarity(predictions, y) + self.B)
+        sji = softmax(self.W * cos_similarity_j(predictions, j_centroids) + self.B)
+
+        cos_similarity_k = nn.CosineSimilarity(dim=2)
+        p_j = predictions.reshape(-1, 1, predictions.shape[-1])
+
+        k_similarity = cos_similarity_k(p_j, k_centroids)
+        sjk = torch.log(torch.sum(torch.exp(k_similarity), dim=1))
+
+        return sjk - sji
+
+
 

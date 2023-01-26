@@ -14,11 +14,11 @@ class ClipShuffle:
             if utterance.shape[0] < self.t:
                 # pad data if less than frame length 
                 padding = np.zeros([self.t - utterance.shape[0], utterance.shape[1]])
-                partial = np.append(utterance, padding, axis=1)
+                partial = np.append(utterance, padding, axis=0)
             else:
                 # pick partial at random index
                 random_ind = random.randint(0, utterance.shape[0] - self.t)
-                partial = utterance[:, random_ind:random_ind+self.t]
+                partial = utterance[random_ind:random_ind+self.t, :]
             partials.append(partial)
 
         return np.array(partials)

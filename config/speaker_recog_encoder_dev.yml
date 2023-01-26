@@ -24,3 +24,4 @@ model:
   projection_size: 256
   embedding_size: 256
   num_layers: 3
+  batch_size: 60

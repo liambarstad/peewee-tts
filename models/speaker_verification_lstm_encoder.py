@@ -58,17 +58,17 @@ class SpeakerVerificationLSTMEncoder(nn.Module):
         # should grad = False for j and k ?
 
         softmax = nn.Softmax(dim=0)
-        cos_similarity_j = nn.CosineSimilarity(dim=1)
+        c_j = nn.CosineSimilarity(dim=1)
+        c_k = nn.CosineSimilarity(dim=2)
+        cos_similarity_j = c_j(predictions, j_centroids)
+        cos_similarity_k = c_k(predictions.reshape(-1, 1, predictions.shape[-1]), k_centroids)
 
-        sji = softmax(self.W * cos_similarity_j(predictions, j_centroids) + self.B)
+        sji = softmax(self.W * cos_similarity_j + self.B)
+        sjk = softmax(self.W * cos_similarity_k + self.B)
 
-        cos_similarity_k = nn.CosineSimilarity(dim=2)
-        p_j = predictions.reshape(-1, 1, predictions.shape[-1])
+        loss = torch.log(torch.sum(torch.exp(sjk), dim=1)) - sji
 
-        k_similarity = cos_similarity_k(p_j, k_centroids)
-        sjk = torch.log(torch.sum(torch.exp(k_similarity), dim=1))
-
-        return sjk - sji
+        return loss, cos_similarity_j, cos_similarity_k
 
 
 

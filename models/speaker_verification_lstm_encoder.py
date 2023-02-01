@@ -39,36 +39,52 @@ class SpeakerVerificationLSTMEncoder(nn.Module):
 
         self.B = nn.Parameter(torch.Tensor([5]))
 
+        self.j_centroids = None 
+
     def forward(self, x):
         # lstm with projection
-        _, (hx, cx) = self.lstm(x)
+        _, (hx, cx) = self.lstm(x.reshape(-1, x.shape[2], x.shape[3]).float())
 
         # linear layer w/ relu
-        x = self.relu(self.linear(hx[-1]))
+        output = self.relu(self.linear(hx[-1]))
 
         # l2 normalize
-        x = func.normalize(x, p=2, dim=1)
+        output = func.normalize(output, p=2, dim=1)
 
-        return x
+        # reshape to N_speakers, M_utterances, Embed_size
+        output = output.view(x.shape[0], x.shape[1], -1)
 
+        # save speaker centroids for backwards pass
+        self.j_centroids = torch.mean(output, dim=1).reshape(x.shape[0], 1, -1)
 
-    def criterion(self, predictions, j_centroids, k_centroids):
-        j_centroids = torch.tensor(j_centroids)
-        k_centroids = torch.tensor(k_centroids)
-        # should grad = False for j and k ?
+        return output.view(x.shape[0], x.shape[1], -1)
+
+    def criterion(self, predictions):
+        cs = nn.CosineSimilarity(dim=2)
+        cos_similarity_j = cs(predictions, self.j_centroids)
+
+        k_centroids = []
+        for i, _ in enumerate(self.j_centroids):
+            all_others = torch.cat((self.j_centroids[:i], self.j_centroids[i+1:]))
+            k_centroids.append(all_others.view(-1, all_others.shape[-1]))
+
+        # shape: N_speakers, N_speakers - 1, Embed Size
+        k_centroids = torch.stack(tuple(k_centroids))
 
         softmax = nn.Softmax(dim=0)
-        c_j = nn.CosineSimilarity(dim=1)
-        c_k = nn.CosineSimilarity(dim=2)
-        cos_similarity_j = c_j(predictions, j_centroids)
-        cos_similarity_k = c_k(predictions.reshape(-1, 1, predictions.shape[-1]), k_centroids)
-
         sji = softmax(self.W * cos_similarity_j + self.B)
-        sjk = softmax(self.W * cos_similarity_k + self.B)
 
-        loss = torch.log(torch.sum(torch.exp(sjk), dim=1)) - sji
+        csk = nn.CosineSimilarity(dim=1)
 
-        return loss, cos_similarity_j, cos_similarity_k
+        # shape: N_speakers, M_utterances, N_speakers - 1
+        sjk = torch.stack(tuple([
+            torch.stack(tuple([
+                softmax(self.W + csk(utterance.reshape(1, -1), k_centroids[i]) + self.B) 
+                for utterance in p
+            ]))
+            for i, p in enumerate(predictions)
+        ]))
 
+        loss = torch.log(torch.sum(torch.exp(sjk), dim=2)) - sji
 
-
+        return loss, sji, sjk

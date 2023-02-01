@@ -18,11 +18,11 @@ class Metrics:
     def add_counter(self, name, func, inc):
         self.counters.append([name, func, inc]) 
 
-    def calculate(self, curr_step, **kwargs):
-        st = f'Step:{curr_step}/{self.total_steps}'
+    def calculate(self, epoch, curr_step, **kwargs):
+        st = f'Epoch: {epoch}, Step:{curr_step}/{self.total_steps}'
         for c in self.counters:
             name, func, inc = c[0], c[1], c[2] 
-            if curr_step % inc == 0:
+            if curr_step == 1 or curr_step % inc == 0:
                 result = func(**kwargs)
                 self._add_data(name, result)
                 self.writer.add_scalar(name, result)
@@ -32,6 +32,9 @@ class Metrics:
     def save(self):
         for d in self.data:
             mlflow.log_metric(d, self.data[d][-1])
+        mlflow.pytorch.log_model(self.model, 'model')
+        state_dict = self.model.state_dict()
+        mlflow.pytorch.log_state_dict(state_dict, artifact_path='state_dict')
 
     def _generate_artifact_path(self, out_path=None):
         if out_path:

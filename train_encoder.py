@@ -9,7 +9,7 @@ from models import SpeakerVerificationLSTMEncoder
 from transforms import MelSpec, ClipShuffle
 from transforms.transform_utils import ToTensor
 from torchvision.transforms import Compose
-from utils import Params, SpeakerCentroids
+from utils import Params
 from metrics.metrics import Metrics
 from metrics.encoder_metrics import contrast_metric, loss_metric
 
@@ -54,7 +54,6 @@ class GreaterThanZeroConstraint(object):
 
 model = SpeakerVerificationLSTMEncoder(**params.model).to(device)
 #model._modules['W'].apply(GreaterThanZeroConstraint())
-speaker_centroids = SpeakerCentroids()
 
 optimizer = torch.optim.Adam(model.parameters(), lr=params.train['learning_rate'])
 
@@ -62,58 +61,37 @@ total_steps = math.ceil(len(dataset) / params.train['N_speakers']) * params.trai
 
 metrics = Metrics(total_steps, model, save_model=save_model)
 
-metrics.add_counter('contrast', contrast_metric, 5)
-metrics.add_counter('loss', loss_metric, 5)
+metrics.add_counter('contrast', contrast_metric, inc=5)
+metrics.add_counter('loss', loss_metric, inc=5)
 
 for epoch in range(params.train['epochs']):
     for i, (speakers, data) in enumerate(dataloader):
 
-        batch = data.reshape(-1, params.clip['t'], params.mel['n_mels']).to(device)
-
-        labels = speakers.reshape(batch.shape[0]).to(device)
-
-        predictions = model(batch.float())
-
-        if i == 0 and epoch == 0:
-            metrics.add_graph(batch)
-
-        speakers_data = speakers.numpy()
-        predictions_data = predictions.detach().numpy()
-
-        # update centroids of data based on mean of predictions, eji
-        for speaker_id in speakers_data[:, 0]:
-            preds_for_speaker = predictions_data[labels == speaker_id]
-            eji = np.mean(preds_for_speaker, axis=0)
-            speaker_centroids.append_data(speaker_id, eji)
-        
-        # get the centroids for utterances from the same speaker j
-        j_centroids = np.array([ speaker_centroids.get_for_speaker(l) for l in labels.numpy() ])
-
-        # get the centroids for all other speakers k
-        k_centroids = np.array([
-            [ j_centroids[(j + i) % len(j_centroids)] for i in range(len(speakers) - 1) ]
-            for j in range(len(j_centroids)) 
-        ])
+        predictions = model(data)
 
         # forward pass
-        loss, cos_similarity_j, cos_similarity_k = model.criterion(predictions, j_centroids, k_centroids)
+        loss, sji, sjk = model.criterion(predictions)
+
         optimizer.zero_grad()
 
+        # backwards pass
         loss.sum().backward()
 
         # TODO: decrease by half at every 30M steps
         optimizer.step()
 
-        curr_step = i + (epoch * int(total_steps / params.train['epochs']))
+        curr_step = i + (epoch * int(total_steps / params.train['epochs'])) + 1
 
         metrics.calculate(
+            # calculates each metric added, if curr_step % inc == 0, prints current step
+            epoch+1,
             curr_step,
             loss=loss,
-            predictions=predictions, 
-            cos_similarity_j=cos_similarity_j,
-            cos_similarity_k=cos_similarity_k
+            sji=sji,
+            sjk=sjk
         )
 
-metrics.save()
+if save_model:
+    metrics.save()
+    print('METRICS + MODEL SAVED')
 
-# save model

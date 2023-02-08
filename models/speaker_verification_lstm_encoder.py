@@ -1,3 +1,4 @@
+import mlflow
 import torch
 from torch import nn
 from torch.nn import functional as func
@@ -88,3 +89,9 @@ class SpeakerVerificationLSTMEncoder(nn.Module):
         loss = torch.log(torch.sum(torch.exp(sjk), dim=2)) - sji
 
         return loss, sji, sjk
+
+    def save(self):
+        mlflow.pytorch.log_model(self, 'model')
+        mlflow.pytorch.log_state_dict(self.state_dict(), artifact_path='state_dict')
+
+

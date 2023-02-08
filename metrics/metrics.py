@@ -1,19 +1,14 @@
 import os
 import mlflow
-from torch.utils.tensorboard import SummaryWriter
+import plotly.express as px
+import pandas as pd
+from PIL import Image
 
 class Metrics:
-    def __init__(self, total_steps, model, save_model=False, out_path=None):
+    def __init__(self, total_steps):
         self.total_steps = total_steps
-        self.out_path = self._generate_artifact_path(out_path)
         self.counters = []
         self.data = {}
-        self.writer = SummaryWriter(self.out_path)
-        self.model = model
-        self.save_model = save_model
-
-    def add_graph(self, inputs):
-        self.writer.add_graph(self.model.float(), inputs.float())
 
     def add_counter(self, name, func, inc):
         self.counters.append([name, func, inc]) 
@@ -25,24 +20,32 @@ class Metrics:
             if curr_step == 1 or curr_step % inc == 0:
                 result = func(**kwargs)
                 self._add_data(name, result)
-                self.writer.add_scalar(name, result)
                 st += f', {name}:{result}'
         print(st)
 
     def save(self):
         for d in self.data:
-            mlflow.log_metric(d, self.data[d][-1])
-        mlflow.pytorch.log_model(self.model, 'model')
-        state_dict = self.model.state_dict()
-        mlflow.pytorch.log_state_dict(state_dict, artifact_path='state_dict')
+            data = self.data[d]
+            mlflow.log_metric(d, data[-1])
+            inc = next(filter(lambda c: c[0] == d, self.counters))[-1]
+            data_df = pd.DataFrame({ 'step': [ i * inc for i, _ in enumerate(data) ], d: data})
+            self.save_graph(d, data_df)
+            self.save_data(d, data_df)
 
-    def _generate_artifact_path(self, out_path=None):
-        if out_path:
-            return out_path
-        else:
-            artifact_uri = mlflow.active_run().info.artifact_uri
-            cwd = os.getcwd()
-            return '.'+artifact_uri.split(cwd)[-1]
+    def save_graph(self, name, data_df):
+        fig = px.line(data_df, x='step', y=name, text=name, title=name)
+        fig.update_traces(textposition='top left')
+        img_name = f'{name}.png'
+        fig.write_image(img_name)
+        with Image.open(img_name) as im:
+            mlflow.log_image(im, img_name)
+            os.remove(img_name, dir_fd=None)
+
+    def save_data(self, name, data_df):
+        csv_name = f'{name}.csv'
+        data_df.to_csv(csv_name, index=False)
+        mlflow.log_artifact(csv_name)
+        os.remove(csv_name, dir_fd=None)
 
     def _add_data(self, name, result):
         if name in self.data:

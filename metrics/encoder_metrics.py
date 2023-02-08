@@ -10,7 +10,8 @@ from torch import nn
 def contrast_metric(sji, sjk, **kwargs):
     with torch.no_grad():
         contrast = 1 - torch.sigmoid(sji) + torch.max(torch.sigmoid(sjk), dim=2).values
-        return contrast.sum() / (len(contrast) * contrast.shape[1])
+        return (contrast.sum() / (len(contrast) * contrast.shape[1])).item()
 
 def loss_metric(loss, **kwargs):
-    return loss.sum() / (loss.shape[0] * loss.shape[1]) 
+    with torch.no_grad():
+        return (loss.sum() / (loss.shape[0] * loss.shape[1])).item()

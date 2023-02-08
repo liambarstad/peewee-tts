@@ -39,27 +39,14 @@ dataset = SpeakerAudioDataset(
 
 dataloader = DataLoader(dataset, batch_size=params.train['N_speakers'], shuffle=params.train['shuffle']) 
 
-'''
-class GreaterThanZeroConstraint(object):
-    def __init__(self):
-        pass
-
-    def __call__(self,module):
-        if hasattr(module,'weight'):
-            import ipdb; ipdb.sset_trace()
-            w=module.weight.data
-            w=w.clamp(0.5,0.7)
-          module.weight.data=w
-'''
-
 model = SpeakerVerificationLSTMEncoder(**params.model).to(device)
-#model._modules['W'].apply(GreaterThanZeroConstraint())
+model.train()
 
 optimizer = torch.optim.Adam(model.parameters(), lr=params.train['learning_rate'])
 
 total_steps = math.ceil(len(dataset) / params.train['N_speakers']) * params.train['epochs']
 
-metrics = Metrics(total_steps, model, save_model=save_model)
+metrics = Metrics(total_steps)
 
 metrics.add_counter('contrast', contrast_metric, inc=5)
 metrics.add_counter('loss', loss_metric, inc=5)
@@ -74,10 +61,10 @@ for epoch in range(params.train['epochs']):
 
         optimizer.zero_grad()
 
-        # backwards pass
+        # backward pass
         loss.sum().backward()
 
-        # TODO: decrease by half at every 30M steps
+        # TODO: decrease lr by half at every 30M steps
         optimizer.step()
 
         curr_step = i + (epoch * int(total_steps / params.train['epochs'])) + 1
@@ -91,7 +78,10 @@ for epoch in range(params.train['epochs']):
             sjk=sjk
         )
 
+metrics.save()
+print('METRICS SAVED')
+
 if save_model:
-    metrics.save()
-    print('METRICS + MODEL SAVED')
+    model.save()
+    print('MODEL SAVED')
 

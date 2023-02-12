@@ -1,3 +1,4 @@
+import os
 import mlflow
 import math
 import torch
@@ -22,6 +23,11 @@ args = parser.parse_args().__dict__
 save_model = args['save_model'] != 'False'
 
 params = Params(args['config_path'])
+
+if params.meta['mlflow_remote_tracking']:
+    mlflow.set_tracking_uri(os.environ['MLFLOW_TRACKING_URI'])
+
+params.save()
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 

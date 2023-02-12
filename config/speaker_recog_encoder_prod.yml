@@ -7,16 +7,19 @@ mel:
 clip:
   t: 160
 
+meta:
+  mlflow_remote_tracking: false
+  load_from_cloud: true
+
 train:
   epochs: 100
   learning_rate: 0.01
   N_speakers: 64
   M_utterances: 10
   shuffle: true
-  root_dir: data/utterance_corpuses
   sources: 
     LibriTTS:
-      version: train-clean-100
+      version: train-other-500
 
 model:
   input_size: 80

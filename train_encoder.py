@@ -32,7 +32,7 @@ params.save()
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 dataset = SpeakerAudioDataset(
-        root_dir=params.train['root_dir'],
+        root_dir=params.train['root_dir'] if 'root_dir' in params.train else '/',
         sources=params.train['sources'],
         m_utterances=params.train['M_utterances'],
         transform=Compose([
@@ -40,7 +40,8 @@ dataset = SpeakerAudioDataset(
             MelSpec(**params.mel),
             # split into clips with length t
             ClipShuffle(**params.clip),
-        ])
+        ]),
+        load_from_cloud=params.meta['load_from_cloud']
     )
 
 dataloader = DataLoader(dataset, batch_size=params.train['N_speakers'], shuffle=params.train['shuffle']) 

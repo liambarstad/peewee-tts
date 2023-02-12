@@ -1,5 +1,7 @@
-import random
+import io
 import os
+import random
+import boto3
 import librosa
 import numpy as np
 import pandas as pd
@@ -7,16 +9,18 @@ from torch.utils.data import Dataset
 
 class SpeakerAudioDataset(Dataset):
     def __init__(self, 
-                 root_dir: str, 
                  sources: dict,
                  m_utterances: int,
                  transform,
+                 root_dir='/', 
+                 load_from_cloud=False
                  ):
         
         self.root_dir = root_dir
         self.sources = sources
         self.m_utterances = m_utterances
         self.transform = transform
+        self.load_from_cloud = load_from_cloud
 
         self.paths = pd.DataFrame([], columns=['dataset', 'speaker', 'path', 'speaker_id'])
 
@@ -37,19 +41,50 @@ class SpeakerAudioDataset(Dataset):
             # select m utterances at random
             m_paths = random.sample(list(paths.values), self.m_utterances)
             for path in m_paths:
-                data, _ = librosa.load(path)
+                if self.load_from_cloud:
+                    data = self._librosa_from_cloud(path)
+                else:
+                    data, _ = librosa.load(path)
                 speaker_data.append(data)
         values = self.transform(speaker_data)
         labels = np.array([ idx for _ in range(self.m_utterances) ])
         return labels, values
 
+    def _librosa_from_cloud(self, path):
+        s3 = boto3.client('s3')
+        obj = s3.get_object(Bucket=os.environ['BUCKET_NAME'], Key=path)
+        bytes_stream = io.BytesIO(obj['Body'].read())
+        data, _ = librosa.load(bytes_stream)
+        return data
+
     def _load_libritts(self, info={}):
-        lbttsdir = os.path.join(self.root_dir, 'LibriTTS', info['version'])
+        # loads all utterance into dataset | speaker | path | speaker_id
+        file_paths = []
+        if self.load_from_cloud:
+            file_paths = self._filepaths_from_cloud(os.environ['BUCKET_NAME'], 'LibriTTS/'+info['version'])
+            self._make_path_dataframe('', file_paths)
+        else:
+            lbttsdir = os.path.join(self.root_dir, 'LibriTTS', info['version'])
+            file_paths = self._filepaths_from_dir(lbttsdir)
+            self._make_path_dataframe(self.root_dir, file_paths)
+
+    def _filepaths_from_cloud(self, bucket_name, prefix):
+        client = boto3.client('s3')
+        objs = client.list_objects(Bucket=bucket_name, Prefix=prefix)
+        return [ o['Key'] for o in objs['Contents'] ]
+
+    def _filepaths_from_dir(self, dirr):
         data = []
-        for root, dirs, files in os.walk(lbttsdir):
+        for root, dirs, files in os.walk(dirr):
             for file in files: 
-                if file[-3:] == 'wav':
-                    data.append(['LibriTTS', file.split('_')[0], os.path.join(root, file)])
+                data.append(file)
+        return data
+
+    def _make_path_dataframe(self, root, file_paths):
+        data = []
+        for file in file_paths:
+            if file[-3:] == 'wav':
+                data.append(['LibriTTS', file.split('/')[-1].split('_')[0], os.path.join(root, file)])
         self._add_to_paths(data)
 
     def _add_to_paths(self, data):

@@ -5,4 +5,4 @@ data/*
 vendor/*
 mlruns/*
 *.cer
-.secrets
+.secrets*

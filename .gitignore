@@ -6,4 +6,5 @@ vendor/*
 mlruns/*
 exploration/*
 *.cer
-.secrets
+*.pkl
+.secrets*

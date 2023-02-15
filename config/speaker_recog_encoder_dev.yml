@@ -7,6 +7,9 @@ mel:
 clip:
   t: 160
 
+meta:
+  mlflow_remote_tracking: false
+
 train:
   epochs: 3
   learning_rate: 0.01
@@ -14,7 +17,8 @@ train:
   M_utterances: 10
   shuffle: true
   root_dir: data/utterance_corpuses
-  sources: 
+  source: local_directory
+  repos:
     LibriTTS:
       version: dev-clean
 

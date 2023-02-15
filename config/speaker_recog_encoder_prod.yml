@@ -8,8 +8,7 @@ clip:
   t: 160
 
 meta:
-  mlflow_remote_tracking: false
-  load_from_cloud: true
+  mlflow_remote_tracking: true
 
 train:
   epochs: 100
@@ -17,7 +16,9 @@ train:
   N_speakers: 64
   M_utterances: 10
   shuffle: true
-  sources: 
+  root_dir: /
+  source: aws_cloud
+  repos: 
     LibriTTS:
       version: train-other-500
 

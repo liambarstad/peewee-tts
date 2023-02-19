@@ -1,0 +1,30 @@
+stft:
+  frame_size: 50
+  frame_hop_ms: 12.5
+  window_function: 'Hann'
+
+mel:
+  n_mels: 80
+  min_filterbank_hz: 125
+  max_filterbank_hz: 7600
+  magnitude_min_val: 0.01
+  
+optimizer:
+  b_1: 0.9
+  b_2: 0.999
+  eps: 0.000001
+
+train:
+  learning_rate_max: 0.001
+  learning_rate_min: 0.00001
+  decay_iterations: 50000
+  l2_reg_weight: 0.000001
+
+model:
+  embedding_size: 512
+  num_layers: [3, 2, 2, 5]
+  hidden_size: 256
+  batch_size: 64
+
+meta: 
+  mlflow_remote_tracking: false

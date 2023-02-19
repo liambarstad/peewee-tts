@@ -12,7 +12,7 @@ from transforms.transform_utils import ToTensor
 from torchvision.transforms import Compose
 from utils import Params
 from metrics.metrics import Metrics
-from metrics.encoder_metrics import contrast_metric, loss_metric
+#from metrics.encoder_metrics import contrast_metric, loss_metric
 
 parser = argparse.ArgumentParser(description='Trains the speaker recognition encoder, generating embeddings for different speakers')
 parser.add_argument('--config-path', type=str, help='path to config .yml file')
@@ -49,22 +49,21 @@ dataloader = DataLoader(dataset, batch_size=params.train['N_speakers'], shuffle=
 model = SpeakerVerificationLSTMEncoder(**params.model).to(device)
 model.train()
 
-optimizer = torch.optim.Adam(model.parameters(), lr=params.train['learning_rate'])
+optimizer = torch.optim.SGD(model.parameters(), lr=params.train['learning_rate'])
 
-total_steps = math.ceil(len(dataset) / params.train['N_speakers']) * params.train['epochs']
+per_epoch = math.ceil(len(dataset) / params.train['N_speakers'])
 
-metrics = Metrics(total_steps)
-
-metrics.add_counter('contrast', contrast_metric, inc=5)
-metrics.add_counter('loss', loss_metric, inc=5)
+metrics = Metrics(params.train['epochs'], per_epoch)
 
 for epoch in range(params.train['epochs']):
     for i, (speakers, data) in enumerate(dataloader):
 
-        predictions = model(data)
+        predictions = model(data.to(device))
+        # need to send input to device, will send error if not
 
         # forward pass
-        loss, sji, sjk = model.criterion(predictions)
+        softmax_loss, contrast_loss = model.criterion(predictions)
+        loss = (softmax_loss + contrast_loss) / 2
 
         optimizer.zero_grad()
 
@@ -74,18 +73,16 @@ for epoch in range(params.train['epochs']):
         # TODO: decrease lr by half at every 30M steps
         optimizer.step()
 
-        curr_step = i + (epoch * int(total_steps / params.train['epochs'])) + 1
+        with torch.no_grad():
+            metrics.add_step({ 
+                'loss': loss.sum().item(),
+                'softmax_loss': softmax_loss.sum().item(),
+                'contrast_loss': contrast_loss.sum().item(),
+            })
 
-        metrics.calculate(
-            # calculates each metric added, if curr_step % inc == 0, prints current step
-            epoch+1,
-            curr_step,
-            loss=loss,
-            sji=sji,
-            sjk=sjk
-        )
-        break
-    break
+    metrics.agg_epoch('loss', agg_fn=sum)
+    metrics.agg_epoch('softmax_loss', agg_fn=sum)
+    metrics.agg_epoch('contrast_loss', agg_fn=sum)
 
 metrics.save()
 print('METRICS SAVED')

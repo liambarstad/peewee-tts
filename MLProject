@@ -8,3 +8,8 @@ entry_points:
       config_path: { type: string, default: "config/speaker_recog_encoder_dev.yml" }
       save_model: { type: string, default: "False" }
     command: "python train_encoder.py --config-path {config_path} --save-model {save_model}"
+  train_tacotron_2:
+    parameters:
+      config_path: { type: string, default: "config/tacotron_2_dev.yml" }
+      save_model: { type: string, default: "False" }
+    command: "python train_tacotron_2.py --config-path {config_path} --save-model {save_model}"

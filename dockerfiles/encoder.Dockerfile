@@ -35,5 +35,5 @@ WORKDIR opt
 
 CMD mlflow run . -e $ENTRY \
     -P config_path=$CONFIG_PATH \
-    -P save_model=true
-
+    -P save_model=true \
+    --experiment-name encoder

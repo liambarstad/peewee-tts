@@ -1,55 +1,60 @@
 import os
+import math
 import mlflow
-import plotly.express as px
+import numpy as np
 import pandas as pd
+import plotly.graph_objects as go
 from PIL import Image
 
 class Metrics:
-    def __init__(self, total_steps):
-        self.total_steps = total_steps
-        self.counters = []
+    def __init__(self, epochs: int, per_epoch: int):
+        self.epochs = epochs
+        self.per_epoch = per_epoch
+        self.current_step = 0
         self.data = {}
+        self.aggregates = {}
 
-    def add_counter(self, name, func, inc):
-        self.counters.append([name, func, inc]) 
+    def add_step(self, values={}):
+        for k in values:
+            if k in self.data:
+                self.data[k].append(values[k])
+            else:
+                self.data[k] = [ values[k] ]
+        self.current_step += 1
+        epoch = math.ceil(self.current_step / self.per_epoch)
+        print(f'Epoch: {epoch}, Step: {self.current_step}/{self.epochs*self.per_epoch}')
 
-    def calculate(self, epoch, curr_step, **kwargs):
-        st = f'Epoch: {epoch}, Step:{curr_step}/{self.total_steps}'
-        for c in self.counters:
-            name, func, inc = c[0], c[1], c[2] 
-            if curr_step == 1 or curr_step % inc == 0:
-                result = func(**kwargs)
-                self._add_data(name, result)
-                st += f', {name}:{result}'
-        print(st)
+    def agg_epoch(self, metric_name: str, agg_fn):
+        data = self.data[metric_name]
+        last_epoch_sum = agg_fn(data[-1*self.per_epoch:])
+        print(f'{metric_name.upper()}: {last_epoch_sum}')
+        if metric_name in self.aggregates:
+            self.aggregates[metric_name].append(last_epoch_sum)
+        else:
+            self.aggregates[metric_name] = [ last_epoch_sum ]
 
     def save(self):
-        for d in self.data:
-            data = self.data[d]
-            mlflow.log_metric(d, data[-1])
-            inc = next(filter(lambda c: c[0] == d, self.counters))[-1]
-            data_df = pd.DataFrame({ 'step': [ i * inc for i, _ in enumerate(data) ], d: data})
-            self.save_graph(d, data_df)
-            self.save_data(d, data_df)
+        for raw_metric in self.data:
+            self._save_data(raw_metric+'_raw', self.data[raw_metric])
+            
+        for agg_metric in self.aggregates:
+            aggs = self.aggregates[agg_metric]
+            mlflow.log_metric(agg_metric, aggs[-1])
+            self._save_graph(agg_metric, aggs)
+            self._save_data(agg_metric+'_agg', aggs)
 
-    def save_graph(self, name, data_df):
-        fig = px.line(data_df, x='step', y=name, text=name, title=name)
-        fig.update_traces(textposition='top left')
+    def _save_data(self, name, data_series):
+        csv_name = f'{name}.csv'
+        pd.Series(data_series).to_csv(csv_name, index=False)
+        mlflow.log_artifact(csv_name)
+        os.remove(csv_name, dir_fd=None)
+
+    def _save_graph(self, name, data_series):
+        fig = go.Figure(data=go.Scatter(x=np.arange(len(data_series)), y=data_series))
         img_name = f'{name}.png'
         fig.write_image(img_name)
         with Image.open(img_name) as im:
             mlflow.log_image(im, img_name)
             os.remove(img_name, dir_fd=None)
 
-    def save_data(self, name, data_df):
-        csv_name = f'{name}.csv'
-        data_df.to_csv(csv_name, index=False)
-        mlflow.log_artifact(csv_name)
-        os.remove(csv_name, dir_fd=None)
-
-    def _add_data(self, name, result):
-        if name in self.data:
-            self.data[name].append(result)
-        else:
-            self.data[name] = [result]
 

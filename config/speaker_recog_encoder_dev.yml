@@ -11,7 +11,7 @@ meta:
   mlflow_remote_tracking: false
 
 train:
-  epochs: 3
+  epochs: 20
   learning_rate: 0.01
   N_speakers: 6
   M_utterances: 10

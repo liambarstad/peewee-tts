@@ -8,6 +8,7 @@ class GreaterThan0Constraint:
         # contstrain W to be > 0
         if type(module).__name__ == 'SpeakerVerificationLSTMEncoder':
             module.W = nn.Parameter(module.W * module.W.clamp(-1, 1))
+# re-assess to check if helping
 
 class SpeakerVerificationLSTMEncoder(nn.Module):
     def __init__(self,
@@ -75,6 +76,7 @@ class SpeakerVerificationLSTMEncoder(nn.Module):
     def criterion(self, predictions):
         cs = nn.CosineSimilarity(dim=2)
         cos_similarity_j = cs(predictions, self.j_i_centroids)
+        sji = self.W * cos_similarity_j + self.B
 
         k_centroids = []
         for i, _ in enumerate(self.j_k_centroids):
@@ -83,29 +85,7 @@ class SpeakerVerificationLSTMEncoder(nn.Module):
         k_centroids = torch.stack(tuple(k_centroids))
         # shape: N_speakers, N_speakers - 1, Embed Size
 
-        softmax_loss = self.compute_softmax_loss(predictions, cos_similarity_j, k_centroids)
-        contrast_loss = self.compute_contrast_loss(predictions, cos_similarity_j, k_centroids)
-        #return softmax_loss + contrast_loss
-        return softmax_loss, contrast_loss
-
-    def compute_softmax_loss(self, predictions, cos_similarity_j, k_centroids):
-        softmax = nn.Softmax(dim=0)
         csk = nn.CosineSimilarity(dim=1)
-        sji = softmax(self.W * cos_similarity_j + self.B)
-        # shape: N_speakers, M_utterances, N_speakers - 1
-        sjk = torch.stack(tuple([
-            torch.stack(tuple([
-                softmax(self.W * csk(utterance.reshape(1, -1), k_centroids[i]) + self.B) 
-                for utterance in p
-            ]))
-            for i, p in enumerate(predictions)
-        ]))
-        return torch.log(torch.sum(torch.exp(sjk), dim=2)) - sji
-
-    def compute_contrast_loss(self, predictions, cos_similarity_j, k_centroids):
-        csk = nn.CosineSimilarity(dim=1)
-        sji = self.W * cos_similarity_j + self.B
-        # shape: N_speakers, M_utterances, N_speakers - 1
         sjk = torch.stack(tuple([
             torch.stack(tuple([
                 self.W * csk(utterance.reshape(1, -1), k_centroids[i]) + self.B
@@ -113,7 +93,11 @@ class SpeakerVerificationLSTMEncoder(nn.Module):
             ]))
             for i, p in enumerate(predictions)
         ]))
-        return 1 - torch.sigmoid(sji) + torch.argmax(torch.sigmoid(sjk), dim=2)
+
+        softmax_loss = torch.log(torch.sum(torch.exp(sjk), dim=2)) - sji
+        contrast_loss = 1 - torch.sigmoid(sji) + torch.argmax(torch.sigmoid(sjk), dim=2) 
+
+        return softmax_loss, contrast_loss
 
     def save(self):
         mlflow.pytorch.log_model(self, 'model')

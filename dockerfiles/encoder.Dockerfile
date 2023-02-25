@@ -27,11 +27,10 @@ ADD datasets/* opt/datasets/
 ADD metrics/* opt/metrics/
 ADD models/* opt/models/
 ADD transforms/* opt/transforms/
-ADD conda.yaml MLProject train_encoder.py utils.py /opt
+ADD conda.yaml MLProject utils.py /opt
+ADD train_encoder.py /opt
 
 WORKDIR opt
-
-# add experiment ID
 
 CMD mlflow run . -e $ENTRY \
     -P config_path=$CONFIG_PATH \

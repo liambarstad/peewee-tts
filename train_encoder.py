@@ -4,15 +4,17 @@ import math
 import torch
 import argparse
 import numpy as np
+from statistics import mean
 from datasets import SpeakerAudioDataset
 from torch.utils.data import DataLoader
 from models import SpeakerVerificationLSTMEncoder
 from transforms import MelSpec, ClipShuffle
-from transforms.transform_utils import ToTensor
 from torchvision.transforms import Compose
 from utils import Params
 from metrics.metrics import Metrics
-#from metrics.encoder_metrics import contrast_metric, loss_metric
+
+# https://arxiv.org/pdf/1710.10467.pdf
+# Li Wan, Quan Wang, Alan Papir, and Ignacio Lopez Moreno, Generalized End-to-End Loss for Speaker Verification," Google Inc., USA
 
 parser = argparse.ArgumentParser(description='Trains the speaker recognition encoder, generating embeddings for different speakers')
 parser.add_argument('--config-path', type=str, help='path to config .yml file')
@@ -63,26 +65,26 @@ for epoch in range(params.train['epochs']):
 
         # forward pass
         softmax_loss, contrast_loss = model.criterion(predictions)
-        loss = (softmax_loss + contrast_loss) / 2
+        loss = softmax_loss + contrast_loss
 
         optimizer.zero_grad()
 
         # backward pass
-        loss.sum().backward()
+        loss.mean().backward()
 
         # TODO: decrease lr by half at every 30M steps
         optimizer.step()
 
         with torch.no_grad():
             metrics.add_step({ 
-                'loss': loss.sum().item(),
-                'softmax_loss': softmax_loss.sum().item(),
-                'contrast_loss': contrast_loss.sum().item(),
+                'loss': loss.mean().item(),
+                'softmax_loss': softmax_loss.mean().item(),
+                'contrast_loss': contrast_loss.mean().item(),
             })
 
-    metrics.agg_epoch('loss', agg_fn=sum)
-    metrics.agg_epoch('softmax_loss', agg_fn=sum)
-    metrics.agg_epoch('contrast_loss', agg_fn=sum)
+    metrics.agg_epoch('loss', agg_fn=mean)
+    metrics.agg_epoch('softmax_loss', agg_fn=mean)
+    metrics.agg_epoch('contrast_loss', agg_fn=mean)
 
 metrics.save()
 print('METRICS SAVED')

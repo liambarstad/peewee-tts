@@ -5,8 +5,7 @@ import boto3
 import librosa
 import numpy as np
 import pandas as pd
-from torch.utils.data import Dataset
-from .sources import AWSCloudSource, LocalDirectorySource
+from .dataset import Dataset
 
 class SpeakerAudioDataset(Dataset):
     def __init__(self, 
@@ -15,20 +14,11 @@ class SpeakerAudioDataset(Dataset):
                  m_utterances: int,
                  transform,
                  root_dir='/', 
-                 load_from_cloud=False
                  ):
-        
-        self.root_dir = root_dir
+        super().__init__(source, root_dir) 
         self.m_utterances = m_utterances
         self.transform = transform
-        self.load_from_cloud = load_from_cloud
-
         self.paths = pd.DataFrame([], columns=['dataset', 'speaker', 'path', 'speaker_id'])
-
-        if source == 'aws_cloud':
-            self.source = AWSCloudSource(self.root_dir)
-        elif source == 'local_directory':
-            self.source = LocalDirectorySource(self.root_dir)
 
         if 'LibriTTS' in repos:
             self._load_libritts(repos['LibriTTS'])

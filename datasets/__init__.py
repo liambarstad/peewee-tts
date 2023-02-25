@@ -1,1 +1,2 @@
 from .speaker_audio_dataset import SpeakerAudioDataset
+from .text_audio_dataset import TextAudioDataset

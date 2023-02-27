@@ -1,12 +1,18 @@
+import librosa
 import pandas as pd
 from .dataset import Dataset
+
+# https://arxiv.org/pdf/2010.10694v2.pdf
 
 class TextAudioDataset(Dataset):
     def __init__(self,
                  source: str,
                  repos: dict,
                  root_dir='/',
-                 transform=None,
+                 transform={
+                    'text': [],
+                    'audio': []
+                 },
                 ):
         super().__init__(source, root_dir)
         self.transform = transform
@@ -40,5 +46,24 @@ class TextAudioDataset(Dataset):
         return len(self.paths)
         
     def __getitem__(self, idx):
-        pass
-        
+        item = self.paths.iloc[idx]
+        text_data = self._transform_text(
+            self.source.load(item['text_path'])
+        )
+        audio_data = self._transform_audio(
+            self.source.load(item['audio_path'])
+        )
+        return text_data, audio_data
+
+    def _transform_text(self, bytesio):
+        text = bytesio.getvalue().decode('utf-8')
+        for transform in self.transform['text']:
+            text = transform(text)
+        return text
+
+    def _transform_audio(self, bytesio):
+        audio, _ = librosa.load(bytesio)
+        for transform in self.transform['audio']:
+            audio = transform(audio_data)
+        return audio
+

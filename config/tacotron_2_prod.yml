@@ -8,14 +8,11 @@ mel:
   min_filterbank_hz: 125
   max_filterbank_hz: 7600
   magnitude_min_val: 0.01
-
-transforms:
-  char_values: "He lokdmavrfbutins,ghywcp;.WTIqDFGPx:EB-CARSMONLzjV\"?J91872U'()!K[]YZ3/4056XQ"
   
 train:
-  epochs: 1
-  source: local_directory
-  root_dir: data/utterance_corpuses
+  epochs: 100
+  source: aws_cloud
+  root_dir: /
   shuffle: true
   beta_0: 0.9
   beta_1: 0.999
@@ -33,7 +30,7 @@ model:
   characters_window: 5
   num_layers: [3, 2, 2, 5]
   hidden_size: 256
-  batch_size: 6
+  batch_size: 64
 
 meta: 
-  mlflow_remote_tracking: false
+  mlflow_remote_tracking: true

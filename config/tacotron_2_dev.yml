@@ -1,7 +1,8 @@
 stft:
-  frame_size: 50
+  sample_rate: 22050
+  frame_size_ms: 50
   frame_hop_ms: 12.5
-  window_function: 'Hann'
+  window_function: 'hann'
 
 mel:
   n_mels: 80

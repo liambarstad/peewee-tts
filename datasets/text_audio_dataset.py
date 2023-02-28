@@ -64,6 +64,6 @@ class TextAudioDataset(Dataset):
     def _transform_audio(self, bytesio):
         audio, _ = librosa.load(bytesio)
         for transform in self.transform['audio']:
-            audio = transform(audio_data)
+            audio = transform(audio)
         return audio
 

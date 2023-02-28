@@ -7,7 +7,7 @@ from datasets import TextAudioDataset
 from models import Tacotron2
 from torch.utils.data import DataLoader
 from transforms import collate
-from transforms import OneHotEncodeCharacters, MelSpec
+from transforms import transform
 from utils import Params
 
 parser = argparse.ArgumentParser(description='Trains the speaker recognition encoder, generating embeddings for different speakers')
@@ -35,10 +35,10 @@ dataset = TextAudioDataset(
     repos=params.train['repos'],
     transform={
         'text': [
-            OneHotEncodeCharacters(values=params.transforms['char_values'])
+            transform.OneHotEncodeCharacters(values=params.transforms['char_values'])
         ],
         'audio': [
-            MelSpec(**params.mel)            
+            transform.STFT(**params.stft)
         ]
     }
 )

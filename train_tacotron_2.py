@@ -5,10 +5,12 @@ import mlflow
 import argparse
 from datasets import TextAudioDataset
 from models import Tacotron2
+from torch import nn
 from torch.utils.data import DataLoader
 from transforms import collate
 from transforms import transform
 from utils import Params
+from metrics.metrics import Metrics
 
 parser = argparse.ArgumentParser(description='Trains the speaker recognition encoder, generating embeddings for different speakers')
 parser.add_argument('--config-path', type=str, help='path to config .yml file')
@@ -29,16 +31,21 @@ params.save()
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
+import numpy as np
+def to_ordinal(data):
+    return np.array([ params.transforms['char_values'].index(d) for d in data ])
+
 dataset = TextAudioDataset(
     source=params.train['source'],
     root_dir=params.train['root_dir'],
     repos=params.train['repos'],
     transform={
         'text': [
-            transform.OneHotEncodeCharacters(values=params.transforms['char_values'])
+            #transform.OneHotEncodeCharacters(values=params.transforms['char_values'])
+            to_ordinal,
         ],
         'audio': [
-            transform.STFT(**params.stft)
+            transform.MelSpec(**params.mel)
         ]
     }
 )
@@ -50,7 +57,7 @@ dataloader = DataLoader(
         collate_fn=collate.MaxPad(axis=(0, 1))
 )
 
-model = Tacotron2(**params.model)#.to(device)
+model = Tacotron2(**params.model, char_values=params.transforms['char_values'])#.to(device)
 model.train()
 
 optimizer = torch.optim.Adam(
@@ -59,25 +66,37 @@ optimizer = torch.optim.Adam(
     eps=params.train['eps']
 )
 
+loss = nn.MSELoss(reduction='mean')
+
 per_epoch = math.ceil(len(dataset) / params.model['batch_size'])
+metrics = Metrics(params.train['epochs'], per_epoch)
+
 current_step = 0
 
 for epoch in range(params.train['epochs']):
     for i, (text, audio) in enumerate(dataloader):
 
-        import ipdb; ipdb.sset_trace()
-        # audio
-        # text : 5 | 512 |
-        # teacher forcing will need to include prev ground truth val per frame
-        # text should be character embeddings
-        # batch_size | 
-        current_step += 1
+        # teacher forcing takes audio as input
+        predictions = model(text, audio)
 
         # decay to params.train['decay_iterations'] == 50000 
-        # batch_size = 64
 
-        predictions = model(input_text.to(device))
-   
-        loss = output_audio 
-        
+        outputs = loss(predictions, audio)
+
+        optimizer.zero_grad()
+
+        outputs.backward()
+
+        optimizer.step()
+
+        import ipdb; ipdb.sset_trace()
+        '''
+        with torch.no_grad():
+            metrics.add_step({
+                
+            })
+
+        '''
+
+        current_step += 1
 

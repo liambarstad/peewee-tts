@@ -1,28 +1,44 @@
 import mlflow
 import torch
 from torch import nn
+from torch.nn import functional as F
 
 class Tacotron2(nn.Module):
     def __init__(self,
                  embedding_size: int,
-                 characters_window: int,
                  num_layers: list,
-                 hidden_size: int,
-                 batch_size: int
+                 encoder_conv_kernel_size: int,
+                 lstm_hidden_size: int,
+                 batch_size: int,
+                 char_values: str
                  ):
         super(Tacotron2, self).__init__()
 
         self.embedding_size = embedding_size
-        self.num_layers = num_layers
-        self.hidden_size = hidden_size
+        self.conv_layers, _, _, _ = num_layers
         self.batch_size = batch_size
-        self.characters_window = 5
 
-        import math   
-        self.conv1 = nn.Conv1d(
-            in_channels=self.embedding_size, 
-            out_channels=math.ceil(self.embedding_size / self.characters_window),
-            kernel_size=5
+        self.character_embedding = nn.Embedding(len(char_values), self.embedding_size)
+
+        # conv = nn.Conv1d(170, math.floor(170 / 5), kernel_size=5)
+
+        
+        self.conv_layers = [
+            nn.Sequential(
+                nn.Conv1d(
+                    self.embedding_size, 
+                    self.embedding_size,
+                    kernel_size=encoder_conv_kernel_size,
+                    padding=int((encoder_conv_kernel_size - 1) / 2) 
+                ), nn.BatchNorm1d(self.embedding_size)
+            ) for _ in range(self.conv_layers)
+        ]
+
+        self.bidirectional_lstm = nn.LSTM(
+            input_size=self.embedding_size,
+            hidden_size=lstm_hidden_size,
+            num_layers=1,
+            bidirectional=True
         )
 
         # 5, 512
@@ -42,9 +58,24 @@ single bi-directional [19] LSTM [20] layer containing 512 units (256
 in each direction) to generate the encoded features.
         '''
 
-    def forward(self, x):
+    def forward(self, text, ground_truth=None):
+        x = self.character_embedding(text.int())
+        x = x.transpose(1, 2)
+        for conv in self.conv_layers:
+            x = F.relu(conv(x))
+        x = x.transpose(1, 2)
+        x, (_, _) = self.bidirectional_lstm(x)
 
-        x = self.conv1(x)
+        import ipdb; ipdb.sset_trace()
+
+
+
+        if not ground_truth:
+            # turn inference on
+            pass
+        else:
+            pass
+            # teacher forcing on ground truth
 
         return x
 

@@ -16,7 +16,7 @@ class OneHotEncodeCharacters:
                 encoded = np.append(encoded, item.reshape(1, -1), axis=1)
             else:
                 encoded = np.append(encoded, item.reshape(1, -1), axis=0)
-        return encoded
+        return encoded.astype(int)
 
 class MelSpec:
     def __init__(self, 
@@ -24,52 +24,35 @@ class MelSpec:
                  hop_length_ms: int,
                  win_length_ms: int,
                  n_mels: int,
-                 **kwargs
+                 window_function='hann'
                 ):
 
         self.sample_rate = sample_rate
-        self.n_fft = self._to_frames(win_length_ms)
-        self.hop_length = self._to_frames(hop_length_ms)
+        self.win_length_ms = win_length_ms
+        self.hop_length_ms = hop_length_ms
         self.n_mels = n_mels
-        self.mel_params = kwargs
-
-    def _to_frames(self, ms):
-        samples_per_millisecond = 0.001 * self.sample_rate
-        return int(samples_per_millisecond * ms)
-
-    def __call__(self, data):
-        specs = [
-            np.transpose(
-                melspectrogram(
-                utterance, 
-                sr=self.sample_rate,
-                n_fft=self.n_fft,
-                hop_length=self.hop_length,
-                n_mels=self.n_mels,
-                **self.mel_params
-            )) for utterance in data
-        ]
-        return specs
-
-class STFT:
-    def __init__(self,
-                 sample_rate: int,
-                 frame_size_ms: int,
-                 frame_hop_ms: float,
-                 window_function: str
-                ):
-        self.sample_rate = sample_rate
-        self.frame_size_ms = frame_size_ms
-        self.frame_hop_ms = frame_hop_ms
         self.window_function = window_function
 
     def __call__(self, data):
-        nperseg = math.floor(self.sample_rate * (self.frame_size_ms / 1000))
-        noverlap = (self.frame_hop_ms / 1000) * self.sample_rate
-        data, _, _ = stft(data, 
-                    nperseg=nperseg,
-                    noverlap=noverlap,
-                    window=self.window_function
-                )
-        return data
-
+        win_length = math.floor((self.win_length_ms / 1000) * self.sample_rate)
+        hop_length = math.floor((self.hop_length_ms / 1000) * self.sample_rate)
+        return np.transpose(melspectrogram(
+            data,
+            sr=self.sample_rate,
+            win_length=win_length,
+            hop_length=hop_length,
+            n_mels=self.n_mels,
+            window=self.window_function
+        ))
+        '''
+        return [
+            np.transpose(melspectrogram(
+                data,
+                sr=self.sample_rate,
+                win_length=win_length,
+                hop_length=hop_length,
+                n_mels=self.n_mels,
+                window=self.window_function
+            )) for utterance in data
+        ]
+        '''

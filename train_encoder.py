@@ -1,15 +1,14 @@
 import os
 import mlflow
 import math
+import time
 import torch
 import argparse
-import numpy as np
 from statistics import mean
 from datasets import SpeakerAudioDataset
 from torch.utils.data import DataLoader
 from models import SpeakerVerificationLSTMEncoder
-from transforms import MelSpec, ClipShuffle
-from torchvision.transforms import Compose
+from transforms import transform
 from utils import Params
 from metrics.metrics import Metrics
 
@@ -31,60 +30,79 @@ if params.meta['mlflow_remote_tracking']:
 
 params.save()
 
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+device = torch.device('cpu')
+if 'cuda_gpu' in params.meta:
+    device = torch.device(f'cuda:{params.meta["cuda_gpu"]}')
+    assert device.type == 'cuda'
 
 dataset = SpeakerAudioDataset(
         root_dir=params.train['root_dir'] if 'root_dir' in params.train else '/',
         source=params.train['source'],
         repos=params.train['repos'],
         m_utterances=params.train['M_utterances'],
-        transform=Compose([
+        transform=[
             # convert to mel spectrogram
-            MelSpec(**params.mel),
+            transform.MelSpec(**params.mel),
             # split into clips with length t
-            ClipShuffle(**params.clip),
-        ])
+            transform.ParsePartial(**params.clip),
+        ]
     )
 
-dataloader = DataLoader(dataset, batch_size=params.train['N_speakers'], shuffle=params.train['shuffle']) 
+dataloader = DataLoader(
+    dataset, 
+    batch_size=params.train['N_speakers'], 
+    shuffle=params.train['shuffle']
+)
 
 model = SpeakerVerificationLSTMEncoder(**params.model).to(device)
 model.train()
 
-optimizer = torch.optim.SGD(model.parameters(), lr=params.train['learning_rate'])
+optimizer = torch.optim.Adam(model.parameters(),
+                             lr=params.train['learning_rate'],
+                             eps=params.train['eps']
+                             )
+mlflow.log_param('optimizer', 'Adam')
 
 per_epoch = math.ceil(len(dataset) / params.train['N_speakers'])
 
 metrics = Metrics(params.train['epochs'], per_epoch)
 
-for epoch in range(params.train['epochs']):
-    for i, (speakers, data) in enumerate(dataloader):
+try:
+    for epoch in range(params.train['epochs']):
+        for i, (speakers, data) in enumerate(dataloader):
+            t1 = time.time()
 
-        predictions = model(data.to(device))
-        # need to send input to device, will send error if not
+            predictions = model(data.to(device))
+            # need to send input to device, will send error if not
 
-        # forward pass
-        softmax_loss, contrast_loss = model.criterion(predictions)
-        loss = softmax_loss + contrast_loss
+            # forward pass
+            softmax_loss, contrast_loss = model.criterion(predictions)
+            loss = softmax_loss + contrast_loss
 
-        optimizer.zero_grad()
+            optimizer.zero_grad()
 
-        # backward pass
-        loss.mean().backward()
+            # backward pass
+            loss.mean().backward()
 
-        # TODO: decrease lr by half at every 30M steps
-        optimizer.step()
+            # TODO: decrease lr by half at every 30M steps
+            optimizer.step()
 
-        with torch.no_grad():
-            metrics.add_step({ 
-                'loss': loss.mean().item(),
-                'softmax_loss': softmax_loss.mean().item(),
-                'contrast_loss': contrast_loss.mean().item(),
-            })
+            t2 = time.time()
 
-    metrics.agg_epoch('loss', agg_fn=mean)
-    metrics.agg_epoch('softmax_loss', agg_fn=mean)
-    metrics.agg_epoch('contrast_loss', agg_fn=mean)
+            with torch.no_grad():
+                metrics.add_step({ 
+                    'loss': loss.mean().item(),
+                    'softmax_loss': softmax_loss.mean().item(),
+                    'contrast_loss': contrast_loss.mean().item(),
+                    'exec_time': t2 - t1
+                })
+
+        metrics.agg_epoch('loss', agg_fn=mean)
+        metrics.agg_epoch('softmax_loss', agg_fn=mean)
+        metrics.agg_epoch('contrast_loss', agg_fn=mean)
+        metrics.agg_epoch('exec_time', agg_fn=sum)
+except KeyboardInterrupt:
+    print('TRAINING LOOP TERMINATED BY USER')
 
 metrics.save()
 print('METRICS SAVED')

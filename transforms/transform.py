@@ -1,6 +1,6 @@
+import random
 import math
 import numpy as np
-from scipy.signal import stft
 from librosa.feature import melspectrogram
 
 class OneHotEncodeCharacters:
@@ -44,15 +44,17 @@ class MelSpec:
             n_mels=self.n_mels,
             window=self.window_function
         ))
-        '''
-        return [
-            np.transpose(melspectrogram(
-                data,
-                sr=self.sample_rate,
-                win_length=win_length,
-                hop_length=hop_length,
-                n_mels=self.n_mels,
-                window=self.window_function
-            )) for utterance in data
-        ]
-        '''
+
+class ParsePartial:
+    def __init__(self, t, indexof=0):
+        self.t = t
+        self.indexof = indexof
+
+    def __call__(self, data):
+        # get partial utterance with each frame length t
+        if data.shape[0] < self.t:
+            padding = np.zeros([self.t - data.shape[0], data.shape[1]])
+            return np.append(data, padding, axis=0)
+        else:
+            random_ind = random.randint(0, data.shape[0] - self.t)
+            return data[random_ind:random_ind+self.t, :]

@@ -1,8 +1,6 @@
-import io
-import os
 import random
-import boto3
 import librosa
+import soundfile
 import numpy as np
 import pandas as pd
 from .dataset import Dataset
@@ -28,7 +26,7 @@ class SpeakerAudioDataset(Dataset):
         file_paths = self.source.member_paths('/LibriTTS/'+info['version'])
         data = []
         for path in file_paths:
-            if path[-3:] == 'wav':
+            if path[-3:] == 'wav' and path.split('/')[-1][0] != '.':
                 data.append([
                     'LibriTTS', 
                     path.split('/')[-1].split('_')[0], 
@@ -53,19 +51,36 @@ class SpeakerAudioDataset(Dataset):
     def __getitem__(self, idx):
         # m_ut, partials_in_longest, n_mels, frames
         paths = self.paths[self.paths.speaker_id == idx].path
-        speaker_data = []
         if len(paths.values) < self.m_utterances:
             # drop data where the number of utterances < M
-            speaker_data = [ np.zeros(1) for _ in range(self.m_utterances) ]
+            values = [ np.zeros(1) for _ in range(self.m_utterances) ]
         else:
-            # select m utterances at random
-            m_paths = random.sample(list(paths.values), self.m_utterances)
-            for path in m_paths:
-                data = self.source.load(path)
-                data, _ = librosa.load(data)
-                speaker_data.append(data)
-        values = self.transform(speaker_data)
+            values = self._get_m_utterances_at_random(list(paths.values))
+        values = self._run_transforms(values)
         labels = np.array([ idx for _ in range(self.m_utterances) ])
         return labels, values
 
+    def _get_m_utterances_at_random(self, paths):
+        values = []
+        m_paths = random.sample(paths, self.m_utterances)
+        for path in m_paths:
+            is_loaded = False
+            while not is_loaded:
+                try:
+                    data = self.source.load(path)
+                    data, _ = librosa.load(data)
+                    is_loaded = True
+                    values.append(data)
+                except soundfile.LibsandfileError:
+                    print(f'file: {path} not readable, continuing...')
+                    path = paths[random.randint(0, len(paths) - 1)]
+        return values
+
+    def _run_transforms(self, values):
+        for transform in self.transform:
+            values = [
+                transform(utterance)
+                for utterance in values
+            ]
+        return np.array(values)
 

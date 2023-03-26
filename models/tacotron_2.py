@@ -2,6 +2,7 @@ import mlflow
 import torch
 from torch import nn
 from torch.nn import functional as F
+from layers.location_sensitive_attention import LocationSensitiveAttention
 
 class Tacotron2(nn.Module):
     def __init__(self,
@@ -9,6 +10,7 @@ class Tacotron2(nn.Module):
                  num_layers: list,
                  encoder_conv_kernel_size: int,
                  lstm_hidden_size: int,
+                 location_sensitive_hidden_size: int,
                  batch_size: int,
                  char_values: str
                  ):
@@ -41,6 +43,10 @@ class Tacotron2(nn.Module):
             bidirectional=True
         )
 
+        self.location_sensitive_attention = LocationSensitiveAttention(
+            hidden_dims=location_sensitive_hidden_size
+        )
+        
         # 5, 512
         # conv
         # embeddings 512
@@ -66,9 +72,7 @@ in each direction) to generate the encoded features.
         x = x.transpose(1, 2)
         x, (_, _) = self.bidirectional_lstm(x)
 
-        import ipdb; ipdb.sset_trace()
-
-
+        seq = self.location_sensitive_attention(x)
 
         if not ground_truth:
             # turn inference on

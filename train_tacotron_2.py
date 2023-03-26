@@ -29,7 +29,10 @@ if params.meta['mlflow_remote_tracking']:
 
 params.save()
 
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+device = torch.device('cpu')
+if 'cuda_gpu' in params.meta:
+    device = torch.device(f'cuda:{params.meta["cuda_gpu"]}')
+    assert device.type == 'cuda'
 
 import numpy as np
 def to_ordinal(data):
@@ -54,7 +57,7 @@ dataloader = DataLoader(
         dataset, 
         params.model['batch_size'], 
         shuffle=params.train['shuffle'],
-        collate_fn=collate.MaxPad(axis=(0, 1))
+        collate_fn=collate.MaxPad(labels_axis=0, values_axis=0)
 )
 
 model = Tacotron2(**params.model, char_values=params.transforms['char_values'])#.to(device)
@@ -73,30 +76,33 @@ metrics = Metrics(params.train['epochs'], per_epoch)
 
 current_step = 0
 
-for epoch in range(params.train['epochs']):
-    for i, (text, audio) in enumerate(dataloader):
+try:
+    for epoch in range(params.train['epochs']):
+        for i, (text, audio) in enumerate(dataloader):
 
-        # teacher forcing takes audio as input
-        predictions = model(text, audio)
+            # teacher forcing takes audio as input
+            predictions = model(text, audio)
 
-        # decay to params.train['decay_iterations'] == 50000 
+            # decay to params.train['decay_iterations'] == 50000 
 
-        outputs = loss(predictions, audio)
+            outputs = loss(predictions, audio)
 
-        optimizer.zero_grad()
+            optimizer.zero_grad()
 
-        outputs.backward()
+            outputs.backward()
 
-        optimizer.step()
+            optimizer.step()
 
-        import ipdb; ipdb.sset_trace()
-        '''
-        with torch.no_grad():
-            metrics.add_step({
-                
-            })
+            import ipdb; ipdb.sset_trace()
+            '''
+            with torch.no_grad():
+                metrics.add_step({
+                    
+                })
 
-        '''
+            '''
 
-        current_step += 1
+            current_step += 1
+except KeyboardInterrupt:
+    print('TRAINING LOOP TERMINATED BY USER') 
 

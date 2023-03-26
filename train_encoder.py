@@ -41,9 +41,11 @@ dataset = SpeakerAudioDataset(
         repos=params.train['repos'],
         m_utterances=params.train['M_utterances'],
         transform=[
+            # reduce noise for 'other' set
+            #transform.ReduceNoise(**params.noise_reduce),
             # convert to mel spectrogram
             transform.MelSpec(**params.mel),
-            # split into clips with length t
+            # split into clip with length t
             transform.ParsePartial(**params.clip),
         ]
     )
@@ -83,6 +85,9 @@ try:
 
             # backward pass
             loss.mean().backward()
+
+            # gradient clipping
+            torch.nn.utils.clip_grad_norm_(model.parameters(), **params.grad_clip)
 
             # TODO: decrease lr by half at every 30M steps
             optimizer.step()

@@ -22,7 +22,8 @@ class Metrics:
                 self.data[k] = [ values[k] ]
         self.current_step += 1
         epoch = math.ceil(self.current_step / self.per_epoch)
-        print(f'Step: {self.current_step%self.per_epoch}/{self.per_epoch}, Epoch: {epoch}/{self.epochs}')
+        step = self.current_step % self.per_epoch if self.current_step % self.per_epoch > 0 else self.per_epoch
+        print(f'Step: {step}/{self.per_epoch}, Epoch: {epoch}/{self.epochs}')
 
     def agg_epoch(self, metric_name: str, agg_fn):
         data = self.data[metric_name]

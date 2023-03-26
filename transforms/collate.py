@@ -14,7 +14,7 @@ class MaxPad:
         return torch.tensor(labels), torch.tensor(values)
 
     def _pad_on_axis(self, data, axis):
-        if axis:
+        if axis != None:
             data_shape = self._estimate_data_shape(data)
             for i in range(axis):
                 # flatten to compare
@@ -24,7 +24,7 @@ class MaxPad:
                 padding = np.zeros((max_length - sample.shape[0], *sample.shape[1:]))
                 data[i] = np.append(sample, padding, axis=0)
             data = np.array(data)
-            return data.reshape(*data_shape[:axis+1], *data.shape[axis:])
+            return data.reshape(*data_shape[:axis+1], *data.shape[axis+1:])
         else:
             return np.array(data)
 

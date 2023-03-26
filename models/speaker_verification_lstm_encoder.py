@@ -44,7 +44,7 @@ class SpeakerVerificationLSTMEncoder(nn.Module):
 
         self.W = nn.Parameter(torch.Tensor([10]))
 
-        self.B = nn.Parameter(torch.Tensor([5]))
+        self.B = nn.Parameter(torch.Tensor([-5]))
 
         self.j_i_centroids = None
         self.j_k_centroids = None 

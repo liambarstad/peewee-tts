@@ -7,23 +7,28 @@ mel:
 clip:
   t: 160
 
+noise_reduce:
+  sample_rate: 16000
+  prop_decrease: 1.0
+  n_fft: 512
+  n_jobs: 5
+
 meta:
   mlflow_remote_tracking: false
-  #cuda_gpu: 0
+  cuda_gpu: 0
 
 train:
   epochs: 20
-  learning_rate: 0.01
+  learning_rate: 0.0075
   eps: 0.0001
   N_speakers: 6
   M_utterances: 10
   shuffle: true
-  #root_dir: data
-  root_dir: data/utterance_corpuses
+  root_dir: data
   source: local_directory
   repos:
     LibriTTS:
-      version: dev-clean
+      version: dev-other
 
 model:
   input_size: 80
@@ -32,3 +37,6 @@ model:
   embedding_size: 256
   num_layers: 3
   batch_size: 60
+
+grad_clip:
+  clip_value: 0.4

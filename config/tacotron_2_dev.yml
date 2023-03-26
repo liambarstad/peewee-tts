@@ -11,7 +11,7 @@ transforms:
 train:
   epochs: 1
   source: local_directory
-  root_dir: data/utterance_corpuses
+  root_dir: data
   shuffle: true
   beta_0: 0.9
   beta_1: 0.999
@@ -22,13 +22,14 @@ train:
   l2_reg_weight: 0.000001
   repos:
     LibriTTS:
-      version: dev-clean
+      version: dev-other
 
 model:
   embedding_size: 512
   num_layers: [3, 2, 2, 5]
   encoder_conv_kernel_size: 5
   lstm_hidden_size: 256
+  location_sensitive_hidden_size: 128
   batch_size: 6
 
 meta: 

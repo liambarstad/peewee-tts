@@ -1,6 +1,7 @@
 import random
 import math
 import numpy as np
+import noisereduce as nr
 from librosa.feature import melspectrogram
 
 class OneHotEncodeCharacters:
@@ -17,6 +18,29 @@ class OneHotEncodeCharacters:
             else:
                 encoded = np.append(encoded, item.reshape(1, -1), axis=0)
         return encoded.astype(int)
+
+class ReduceNoise:
+    def __init__(self,
+                 sample_rate: int,
+                 prop_decrease: float,
+                 n_fft: int,
+                 n_jobs=1
+                 ):
+        self.sample_rate = sample_rate
+        self.prop_decrease = prop_decrease
+        self.n_fft = n_fft
+        self.n_jobs = n_jobs
+
+    def __call__(self, data):
+        reduced = nr.reduce_noise(
+            y=data,
+            sr=self.sample_rate,
+            prop_decrease=self.prop_decrease,
+            n_fft=self.n_fft,
+            n_jobs=self.n_jobs
+        ) 
+        reduced[np.isnan(reduced)] = 0.0
+        return reduced.astype(float)
 
 class MelSpec:
     def __init__(self, 
@@ -37,7 +61,7 @@ class MelSpec:
         win_length = math.floor((self.win_length_ms / 1000) * self.sample_rate)
         hop_length = math.floor((self.hop_length_ms / 1000) * self.sample_rate)
         return np.transpose(melspectrogram(
-            data,
+            y=data,
             sr=self.sample_rate,
             win_length=win_length,
             hop_length=hop_length,

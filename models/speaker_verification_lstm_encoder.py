@@ -2,22 +2,18 @@ import mlflow
 import torch
 from torch import nn
 from torch.nn import functional as func
-
-class GreaterThan0Constraint:
-    def __call__(self, module):
-        # contstrain W to be > 0
-        if type(module).__name__ == 'SpeakerVerificationLSTMEncoder':
-            module.W = nn.Parameter(module.W * module.W.clamp(-1, 1))
-# re-assess to check if helping
+from .constraints import GreaterThan0Constraint, GradientScaleParams
 
 class SpeakerVerificationLSTMEncoder(nn.Module):
     def __init__(self,
-                 input_size,
-                 hidden_size,
-                 projection_size,
-                 embedding_size,
-                 batch_size,
-                 num_layers
+                 input_size: int,
+                 hidden_size: int,
+                 projection_size: int,
+                 embedding_size: int,
+                 batch_size: int,
+                 proj_scale_factor: float,
+                 w_scale_factor: float,
+                 num_layers: int
                 ):
         super(SpeakerVerificationLSTMEncoder, self).__init__()
         self.input_size = input_size
@@ -26,6 +22,8 @@ class SpeakerVerificationLSTMEncoder(nn.Module):
         self.embedding_size = embedding_size
         self.num_layers = num_layers
         self.batch_size = batch_size
+        self.proj_scale_factor = proj_scale_factor
+        self.w_scale_factor = w_scale_factor
 
         self.lstm = nn.LSTM(
             self.input_size,
@@ -34,6 +32,7 @@ class SpeakerVerificationLSTMEncoder(nn.Module):
             proj_size=self.projection_size,
             batch_first=True
         )
+        self._grad_scale_lstm_proj()
 
         self.linear = nn.Linear(
             in_features=self.projection_size,
@@ -43,13 +42,12 @@ class SpeakerVerificationLSTMEncoder(nn.Module):
         self.relu = nn.ReLU()
 
         self.W = nn.Parameter(torch.Tensor([10]))
+        self._constrain_W_parameter()
 
         self.B = nn.Parameter(torch.Tensor([-5]))
 
         self.j_i_centroids = None
         self.j_k_centroids = None 
-        
-        self.apply(GreaterThan0Constraint())
 
         self._init_weights()
 
@@ -102,6 +100,21 @@ class SpeakerVerificationLSTMEncoder(nn.Module):
     def save(self):
         mlflow.pytorch.log_model(self, 'model')
         mlflow.pytorch.log_state_dict(self.state_dict(), artifact_path='state_dict')
+
+    def _grad_scale_lstm_proj(self):
+        lstm_weight_names = self.lstm._flat_weights_names
+        proj_layer_names = [ 
+            name for name in lstm_weight_names 
+            if name.startswith('weight_hr') 
+        ]
+        gc = GradientScaleParams(proj_layer_names, self.proj_scale_factor)
+        self.lstm.register_full_backward_hook(gc)
+
+    def _constrain_W_parameter(self):
+        wcp = GradientScaleParams(['W'], self.w_scale_factor)
+        self.register_full_backward_hook(wcp)
+        wg0 = GreaterThan0Constraint(['W'])
+        self.register_full_backward_hook(wg0)
 
     def _init_weights(self):
         weight_fn = nn.init.orthogonal_

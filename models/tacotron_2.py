@@ -2,7 +2,7 @@ import mlflow
 import torch
 from torch import nn
 from torch.nn import functional as F
-from layers.location_sensitive_attention import LocationSensitiveAttention
+from .layers.location_sensitive_attention import LocationSensitiveAttention
 
 class Tacotron2(nn.Module):
     def __init__(self,

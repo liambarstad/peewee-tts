@@ -1,17 +1,22 @@
-mel:
+vad:
   sample_rate: 16000
-  hop_length_ms: 10
-  win_length_ms: 25 
-  n_mels: 80
-
-clip:
-  t: 160
+  frame_size: 1000
+  aggressiveness_index: 2
 
 noise_reduce:
   sample_rate: 16000
   prop_decrease: 1.0
   n_fft: 512
-  n_jobs: 5
+  n_jobs: 20
+
+mel:
+  sample_rate: 16000
+  hop_length_ms: 10
+  win_length_ms: 25 
+  n_mels: 40
+
+clip:
+  t: 160
 
 meta:
   mlflow_remote_tracking: false
@@ -19,8 +24,6 @@ meta:
 
 train:
   epochs: 20
-  learning_rate: 0.0075
-  eps: 0.0001
   N_speakers: 6
   M_utterances: 10
   shuffle: true
@@ -30,13 +33,25 @@ train:
     LibriTTS:
       version: dev-other
 
+optimizer:
+  lr: 0.01
+  eps: 0.0001
+
+lr_scheduler:
+  T_0: 5
+  T_mult: 1
+  eta_min: 0.0001
+
 model:
   input_size: 80
   hidden_size: 257
   projection_size: 256
   embedding_size: 256
-  num_layers: 3
   batch_size: 60
+  proj_scale_factor: 0.5
+  w_scale_factor: 0.01
+  num_layers: 3
 
 grad_clip:
-  clip_value: 0.4
+  norm_type: 2.0
+  max_norm: 3

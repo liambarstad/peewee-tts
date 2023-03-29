@@ -1,5 +1,6 @@
 import random
 import math
+import webrtcvad
 import numpy as np
 import noisereduce as nr
 from librosa.feature import melspectrogram
@@ -82,3 +83,26 @@ class ParsePartial:
         else:
             random_ind = random.randint(0, data.shape[0] - self.t)
             return data[random_ind:random_ind+self.t, :]
+
+class VAD:
+    def __init__(self, 
+                 sample_rate: int, 
+                 frame_size: int, 
+                 aggressiveness_index: int
+                 ):
+        self.sample_rate = sample_rate
+        self.frame_size = frame_size
+        self.aggressiveness_index = aggressiveness_index
+
+        self.vad = webrtcvad.Vad(self.aggressiveness_index)
+
+    def __call__(self, data):
+        for i in range(math.floor(len(data) / self.frame_size)):
+            frame = data[i*self.frame_size:(i+1)*self.frame_size]
+            pcm_data = self._float_to_pcm(frame)
+            import ipdb; ipdb.sset_trace()
+
+    def _float_to_pcm(self, data):
+        ints = (data * 32767).astype(np.int16)
+        little_endian = ints.astype('<u2')
+        return little_endian.tobytes()

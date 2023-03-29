@@ -42,7 +42,9 @@ dataset = SpeakerAudioDataset(
         m_utterances=params.train['M_utterances'],
         transform=[
             # reduce noise for 'other' set
-            #transform.ReduceNoise(**params.noise_reduce),
+            transform.ReduceNoise(**params.noise_reduce),
+            # voice activity detection
+            transform.VAD(**params.vad),
             # convert to mel spectrogram
             transform.MelSpec(**params.mel),
             # split into clip with length t
@@ -59,11 +61,15 @@ dataloader = DataLoader(
 model = SpeakerVerificationLSTMEncoder(**params.model).to(device)
 model.train()
 
-optimizer = torch.optim.Adam(model.parameters(),
-                             lr=params.train['learning_rate'],
-                             eps=params.train['eps']
-                             )
+optimizer = torch.optim.Adam(model.parameters(), **params.optimizer)
 mlflow.log_param('optimizer', 'Adam')
+
+scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
+    optimizer, 
+    **params.lr_scheduler
+)
+
+mlflow.log_param('scheduler', 'CosineAnnealingWarmRestarts')
 
 per_epoch = math.ceil(len(dataset) / params.train['N_speakers'])
 
@@ -75,22 +81,14 @@ try:
             t1 = time.time()
 
             predictions = model(data.to(device))
-            # need to send input to device, will send error if not
 
-            # forward pass
             softmax_loss, contrast_loss = model.criterion(predictions)
             loss = softmax_loss + contrast_loss
-
             optimizer.zero_grad()
-
-            # backward pass
             loss.mean().backward()
-
-            # gradient clipping
             torch.nn.utils.clip_grad_norm_(model.parameters(), **params.grad_clip)
-
-            # TODO: decrease lr by half at every 30M steps
             optimizer.step()
+            scheduler.step()
 
             t2 = time.time()
 
@@ -99,13 +97,15 @@ try:
                     'loss': loss.mean().item(),
                     'softmax_loss': softmax_loss.mean().item(),
                     'contrast_loss': contrast_loss.mean().item(),
-                    'exec_time': t2 - t1
+                    'exec_time': t2 - t1,
+                    'learning_rate': scheduler.get_last_lr()[0]
                 })
 
         metrics.agg_epoch('loss', agg_fn=mean)
         metrics.agg_epoch('softmax_loss', agg_fn=mean)
         metrics.agg_epoch('contrast_loss', agg_fn=mean)
         metrics.agg_epoch('exec_time', agg_fn=sum)
+        metrics.agg_epoch('learning_rate', agg_fn=lambda x: x[-1])
 except KeyboardInterrupt:
     print('TRAINING LOOP TERMINATED BY USER')
 

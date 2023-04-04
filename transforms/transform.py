@@ -1,5 +1,6 @@
 import random
 import math
+import librosa
 import webrtcvad
 import numpy as np
 import noisereduce as nr
@@ -48,6 +49,7 @@ class MelSpec:
                  sample_rate: int, 
                  hop_length_ms: int,
                  win_length_ms: int,
+                 n_fft: int,
                  n_mels: int,
                  window_function='hann'
                 ):
@@ -55,6 +57,7 @@ class MelSpec:
         self.sample_rate = sample_rate
         self.win_length_ms = win_length_ms
         self.hop_length_ms = hop_length_ms
+        self.n_fft = n_fft
         self.n_mels = n_mels
         self.window_function = window_function
 
@@ -66,6 +69,7 @@ class MelSpec:
             sr=self.sample_rate,
             win_length=win_length,
             hop_length=hop_length,
+            n_fft=self.n_fft,
             n_mels=self.n_mels,
             window=self.window_function
         ))
@@ -87,22 +91,39 @@ class ParsePartial:
 class VAD:
     def __init__(self, 
                  sample_rate: int, 
-                 frame_size: int, 
+                 sample_rate_internal: int,
+                 frame_size_ms: int, 
                  aggressiveness_index: int
                  ):
         self.sample_rate = sample_rate
-        self.frame_size = frame_size
+        self.sample_rate_internal = sample_rate_internal
+        self.frame_size_ms = frame_size_ms
         self.aggressiveness_index = aggressiveness_index
 
         self.vad = webrtcvad.Vad(self.aggressiveness_index)
 
     def __call__(self, data):
-        for i in range(math.floor(len(data) / self.frame_size)):
-            frame = data[i*self.frame_size:(i+1)*self.frame_size]
-            pcm_data = self._float_to_pcm(frame)
-            import ipdb; ipdb.sset_trace()
+        output = np.array([])
+        resampled = librosa.resample(data, orig_sr=self.sample_rate, target_sr=self.sample_rate_internal)
+        frame_samp_size = int(self.sample_rate_internal * (self.frame_size_ms / 1000.0) * 2)
+        pcm_data = self._float_to_pcm(resampled)
+        total_frames = math.floor(len(pcm_data) / frame_samp_size)
+        fr_approx_len = len(data) / total_frames
+        for i in range(total_frames):
+            frame = pcm_data[i*frame_samp_size:(i+1)*frame_samp_size]
+            try:
+                if self.vad.is_speech(frame, self.sample_rate_internal):
+                    resampled_frame = data[math.floor(i*fr_approx_len):math.floor((i+1)*fr_approx_len)]
+                    output = np.append(output, resampled_frame)
+            except Exception as e:
+                # I hate this package so much
+                if e.__class__.__module__ == 'webrtcvad':
+                    continue
+                else:
+                    raise e
+        return output
 
     def _float_to_pcm(self, data):
-        ints = (data * 32767).astype(np.int16)
+        ints = (data * 32768).astype(np.int16)
         little_endian = ints.astype('<u2')
-        return little_endian.tobytes()
+        return little_endian.tostring()

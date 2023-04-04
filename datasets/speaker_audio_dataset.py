@@ -52,28 +52,20 @@ class SpeakerAudioDataset(Dataset):
         # m_ut, partials_in_longest, n_mels, frames
         paths = self.paths[self.paths.speaker_id == idx].path
         if len(paths.values) < self.m_utterances:
-            # drop data where the number of utterances < M
-            values = [ np.zeros(1) for _ in range(self.m_utterances) ]
+            m_paths = [ random.choice(list(paths.values)) for _ in range(self.m_utterances) ]
         else:
-            values = self._get_m_utterances_at_random(list(paths.values))
+            m_paths = random.sample(list(paths.values), self.m_utterances)
+        values = self._get_m_utterances(m_paths)
         values = self._run_transforms(values)
         labels = np.array([ idx for _ in range(self.m_utterances) ])
         return labels, values
 
-    def _get_m_utterances_at_random(self, paths):
+    def _get_m_utterances(self, paths):
         values = []
-        m_paths = random.sample(paths, self.m_utterances)
-        for path in m_paths:
-            is_loaded = False
-            while not is_loaded:
-                try:
-                    data = self.source.load(path)
-                    data, _ = librosa.load(data)
-                    is_loaded = True
-                    values.append(data)
-                except soundfile.LibsandfileError:
-                    print(f'file: {path} not readable, continuing...')
-                    path = paths[random.randint(0, len(paths) - 1)]
+        for path in paths:
+            data = self.source.load(path)
+            data, _ = librosa.load(data)
+            values.append(data)
         return values
 
     def _run_transforms(self, values):

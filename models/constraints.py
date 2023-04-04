@@ -16,4 +16,5 @@ class GradientScaleParams:
 
     def __call__(self, module, grad_input, grad_output):
         for param in self.param_names:
-            getattr(module, param).grad *= self.factor
+            if getattr(module, param).grad is not None:
+                getattr(module, param).grad *= self.factor

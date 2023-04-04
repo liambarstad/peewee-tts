@@ -1,17 +1,25 @@
+noise_reduce:
+  sample_rate: 24000
+  prop_decrease: 0.8
+  n_fft: 512
+  n_jobs: 40
+
+vad:
+  sample_rate: 24000
+  sample_rate_internal: 16000
+  frame_size_ms: 10
+  # size can only be 10, 20 or 30ms long
+  aggressiveness_index: 3
+
 mel:
   sample_rate: 16000
   hop_length_ms: 10
   win_length_ms: 25 
+  n_fft: 512
   n_mels: 80
 
 clip:
   t: 160
-
-noise_reduce:
-  sample_rate: 16000
-  prop_decrease: 1.0
-  n_fft: 512
-  n_jobs: 20
 
 meta:
   mlflow_remote_tracking: false
@@ -19,24 +27,36 @@ meta:
 
 train:
   epochs: 1000
-  learning_rate: 0.0075
-  eps: 0.0001
   N_speakers: 64
   M_utterances: 10
   shuffle: true
+  num_workers: 10
   root_dir: ../../../../media/overlord/My Passport
   source: local_directory
   repos: 
     LibriTTS:
       version: train-other-500
 
+optimizer:
+  lr: 0.01
+
+lr_scheduler:
+  threshold: 0.000001
+  patience: 20
+  min_lr: 0.0001
+  eps: 0.000001
+  verbose: true
+
 model:
   input_size: 80
-  hidden_size: 257
+  hidden_size: 256
   projection_size: 256
   embedding_size: 256
-  num_layers: 3
   batch_size: 60
+  proj_scale_factor: 0.5
+  wb_scale_factor: 0.01
+  num_layers: 3
 
 grad_clip:
-  max_norm: 0.4
+  norm_type: 2.0
+  max_norm: 3

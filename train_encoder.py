@@ -7,7 +7,7 @@ import argparse
 from statistics import mean
 from datasets import SpeakerAudioDataset
 from torch.utils.data import DataLoader
-from models import SpeakerVerificationLSTMEncoder
+from models.speaker_verification_lstm_encoder import SpeakerVerificationLSTMEncoder
 from transforms import transform
 from utils import Params
 from metrics.metrics import Metrics

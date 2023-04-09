@@ -1,3 +1,4 @@
+import math
 import mlflow
 import torch
 import torch.nn.functional as F
@@ -47,24 +48,48 @@ class SpeakerVerificationLSTMEncoder(nn.Module):
 
         self._init_weights()
 
-    def forward(self, x):
+    def forward(self, x, t=160, overlap=0.5, padding_value=1e-8):
+        if self.training:
+            return self.train_forward(x, padding_value)
+        else:
+            with torch.no_grad():
+                return self.infer_forward(x, t, overlap, padding_value)
+
+    def train_forward(self, x, padding_value=1e-8):
         # constrain W to be > 0
         if self.W[0] <= 0:
-            self.W = nn.Parameter(torch.Tensor([1e-6]))
+            self.W = nn.Parameter(torch.Tensor([padding_value]))
+        output = self.run_network(x)
+        # save speaker centroids for backwards pass
+        with torch.no_grad():
+            self.j_i_centroids = self._calculate_j_i_centroids(output)
+            self.j_k_centroids = torch.mean(output, dim=1)
+        return output
 
+    def infer_forward(self, x, t=160, overlap=0.5, padding_value=1e-8):
+        # break audio out into frames with sliding window
+        window_hop = int(t*overlap)
+        frames_in_audio = math.ceil(x.shape[1] / window_hop)
+        frames = torch.zeros(x.shape[0], frames_in_audio, t, x.shape[2])
+        frames_with_content = torch.zeros(x.shape[0], frames_in_audio)
+        for speaker_ind, speaker in enumerate(frames):
+            for frame_ind, _ in enumerate(speaker):
+                start_ind = frame_ind*window_hop
+                frame = x[speaker_ind][start_ind:start_ind+t]
+                if torch.sum(frame) > t*padding_value:
+                    frames[speaker_ind][frame_ind] = torch.cat((frame, torch.zeros(t-frame.shape[0], frame.shape[1])), dim=0)
+                    frames_with_content[speaker_ind][frame_ind] = 1.0
+        predictions = self.run_network(frames)
+        # take average of frame predictions
+        return torch.sum(predictions, dim=1) / torch.sum(frames_with_content, dim=1).unsqueeze(1)
+
+    def run_network(self, x):
         lstm_out, _ = self.lstm(x.reshape(-1, *x.shape[2:]).float())
         last_lstm = lstm_out[:, lstm_out.size(1)-1]
         projected = self.projection_layer(last_lstm.float())
         output = F.normalize(projected, p=2, dim=1)
         # reshape to N_speakers, M_utterances, Embed_size
-        output = output.view(x.shape[0], x.shape[1], -1)
-
-        # save speaker centroids for backwards pass
-        with torch.no_grad():
-            self.j_i_centroids = self._calculate_j_i_centroids(output)
-            self.j_k_centroids = torch.mean(output, dim=1)
-
-        return output
+        return output.view(x.shape[0], x.shape[1], -1)
 
     def criterion(self, predictions):
         # positive component for similarity between utterance and its speaker's centroid (N, M)

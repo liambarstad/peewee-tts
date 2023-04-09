@@ -29,8 +29,13 @@ model:
   num_layers: [3, 2, 2, 5]
   encoder_conv_kernel_size: 5
   lstm_hidden_size: 256
-  location_sensitive_hidden_size: 128
+  attn_hidden_size: 128
+  attn_inverse_temperature: 1.0
+  attn_window_length: 8
+  attn_n_filters: 32
+  attn_conv_kernel_size: 31
   batch_size: 6
+  speaker_embedding_model_uri: models:/Speaker_Embedding_Test1/latest
 
 meta: 
   mlflow_remote_tracking: false

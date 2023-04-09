@@ -4,7 +4,7 @@ import torch
 import mlflow
 import argparse
 from datasets import TextAudioDataset
-from models import Tacotron2
+from models.tacotron_2 import Tacotron2
 from torch import nn
 from torch.utils.data import DataLoader
 from transforms import collate
@@ -60,7 +60,11 @@ dataloader = DataLoader(
         collate_fn=collate.MaxPad(labels_axis=0, values_axis=0)
 )
 
-model = Tacotron2(**params.model, char_values=params.transforms['char_values'])#.to(device)
+model = Tacotron2(
+    **params.model, 
+    char_values=params.transforms['char_values'],
+    device=device
+)
 model.train()
 
 optimizer = torch.optim.Adam(

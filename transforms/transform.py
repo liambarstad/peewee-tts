@@ -49,9 +49,9 @@ class MelSpec:
                  sample_rate: int, 
                  hop_length_ms: int,
                  win_length_ms: int,
-                 n_fft: int,
                  n_mels: int,
-                 window_function='hann'
+                 window_function='hann',
+                 n_fft=2048
                 ):
 
         self.sample_rate = sample_rate

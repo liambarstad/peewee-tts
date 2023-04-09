@@ -26,7 +26,7 @@ meta:
   cuda_gpu: 0
 
 train:
-  epochs: 1000
+  epochs: 10000
   N_speakers: 64
   M_utterances: 10
   shuffle: true

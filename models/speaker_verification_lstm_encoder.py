@@ -103,6 +103,7 @@ class SpeakerVerificationLSTMEncoder(nn.Module):
     def save(self):
         mlflow.pytorch.log_model(self, 'model')
         mlflow.pytorch.log_state_dict(self.state_dict(), artifact_path='state_dict')
+        print('MODEL SAVED')
 
     def _constrain_proj_layer(self):
         plc = GradientScaleParams(['weight', 'bias'], self.proj_scale_factor)

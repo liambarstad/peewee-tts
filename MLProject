@@ -13,3 +13,8 @@ entry_points:
       config_path: { type: string, default: "config/tacotron_2_dev.yml" }
       save_model: { type: string, default: "False" }
     command: "python train_tacotron_2.py --config-path {config_path} --save-model {save_model}"
+  train_tt2_vendor:
+    parameters:
+      config_path: { type: string, default: "vendor/tacotron_2/tt2_vendor_dev.yml" }
+      save_model: { type: string, default: "False" }
+    command: "python train_tt2_vendor.py --config-path {config_path} --save-model {save_model}"

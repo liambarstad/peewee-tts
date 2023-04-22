@@ -1,5 +1,6 @@
 import os
 import math
+from datetime import datetime
 import mlflow
 import numpy as np
 import pandas as pd
@@ -13,8 +14,10 @@ class Metrics:
         self.current_step = 0
         self.data = {}
         self.aggregates = {}
+        print(f'{self._get_timestamp()} START RUN')
 
     def add_step(self, values={}):
+        timestamp = self._get_timestamp()
         for k in values:
             if k in self.data:
                 self.data[k].append(values[k])
@@ -23,12 +26,16 @@ class Metrics:
         self.current_step += 1
         epoch = math.ceil(self.current_step / self.per_epoch)
         step = self.current_step % self.per_epoch if self.current_step % self.per_epoch > 0 else self.per_epoch
-        print(f'Step: {step}/{self.per_epoch}, Epoch: {epoch}/{self.epochs}')
+        print(f'{timestamp} Step: {step}/{self.per_epoch}, Epoch: {epoch}/{self.epochs}')
+
+    def _get_timestamp(self):
+        return f'[ {str(datetime.utcnow())} ]:'
 
     def agg_epoch(self, metric_name: str, agg_fn):
+        timestamp = self._get_timestamp()
         data = self.data[metric_name]
         last_epoch_sum = agg_fn(data[-1*self.per_epoch:])
-        print(f'{metric_name.upper()}: {last_epoch_sum}')
+        print(f'{timestamp} METRIC: {metric_name.upper()}: {last_epoch_sum}')
         if metric_name in self.aggregates:
             self.aggregates[metric_name].append(last_epoch_sum)
         else:
@@ -43,6 +50,7 @@ class Metrics:
             mlflow.log_metric(agg_metric, aggs[-1])
             self._save_graph(agg_metric, aggs)
             self._save_data(agg_metric+'_agg', aggs)
+        print('METRICS SAVED')
 
     def _save_data(self, name, data_series):
         csv_name = f'{name}.csv'

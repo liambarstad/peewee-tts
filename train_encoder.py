@@ -15,15 +15,7 @@ from metrics.metrics import Metrics
 # https://arxiv.org/pdf/1710.10467.pdf
 # Li Wan, Quan Wang, Alan Papir, and Ignacio Lopez Moreno, Generalized End-to-End Loss for Speaker Verification," Google Inc., USA
 
-parser = argparse.ArgumentParser(description='Trains the speaker recognition encoder, generating embeddings for different speakers')
-parser.add_argument('--config-path', type=str, help='path to config .yml file')
-parser.add_argument('--save-model', type=str, help='whether or not to save the model')
-parser.set_defaults(save_model='False')
-
-args = parser.parse_args().__dict__
-save_model = args['save_model'] != 'False'
-
-params = Params(args['config_path'])
+params = Params()
 
 if params.meta['mlflow_remote_tracking']:
     mlflow.set_tracking_uri(os.environ['MLFLOW_TRACKING_URI'])
@@ -110,9 +102,7 @@ except KeyboardInterrupt:
     print('TRAINING LOOP TERMINATED BY USER')
 
 metrics.save()
-print('METRICS SAVED')
 
-if save_model:
+if params.save_model:
     model.save()
-    print('MODEL SAVED')
 

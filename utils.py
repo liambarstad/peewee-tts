@@ -2,8 +2,11 @@ import mlflow
 import yaml
 
 class Params:
-    def __init__(self, fname):
-        with open(fname, 'r') as file:
+    def __init__(self, config_path, save_model):
+        if save_model != 'False':
+            self.save_model = True
+
+        with open(config_path, 'r') as file:
             self.model_config = yaml.safe_load(file)
             for section in self.model_config:
                 parameters = self.model_config[section]
@@ -14,6 +17,7 @@ class Params:
             parameters = self.model_config[section]
             for param in parameters:
                 mlflow.log_param(f'{section}_{param}', parameters[param])
+        print('PARAMETERS SAVED')
 
 class SpeakerCentroids:
     def __init__(self, cks={}):

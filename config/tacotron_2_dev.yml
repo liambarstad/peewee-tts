@@ -9,7 +9,7 @@ transforms:
   char_values: "He lokdmavrfbutins,ghywcp;.WTIqDFGPx:EB-CARSMONLzjV\"?J91872U'()!K[]YZ3/4056XQ"
   
 train:
-  epochs: 1
+  epochs: 4
   source: local_directory
   root_dir: data
   shuffle: true
@@ -23,19 +23,30 @@ train:
   repos:
     LibriTTS:
       version: dev-other
+  stop_token_threshold: 0.5
+
+speaker_embedding_model:
+  config_path: 'config/speaker_recog_encoder_dev.yml'
+  state_dict_uri: 'mlruns/622292915956719578/5cde163e56ee472eb8b1f4bcc4a10b38/artifacts/state_dict'
 
 model:
+  speaker_embedding_model_uri: models:/Speaker_Embedding_Test1/latest
   embedding_size: 512
-  num_layers: [3, 2, 2, 5]
+  speaker_embedding_size: 256
+  num_layers: [3, 2, 5]
   encoder_conv_kernel_size: 5
   lstm_hidden_size: 256
-  attn_hidden_size: 128
+  prenet_hidden_size: 256
+  encoder_lstm_hidden_size: 1024
+  location_hidden_dim: 128
+  location_n_filters: 32
+  location_kernel_size: 31
   attn_inverse_temperature: 1.0
-  attn_window_length: 8
-  attn_n_filters: 32
-  attn_conv_kernel_size: 31
+  decoder_lstm_hidden_size: 1024
+  postnet_embedding_dim: 512
+  postnet_kernel_size: 5
   batch_size: 6
-  speaker_embedding_model_uri: models:/Speaker_Embedding_Test1/latest
 
 meta: 
   mlflow_remote_tracking: false
+  cuda_gpu: 0

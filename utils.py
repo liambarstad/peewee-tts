@@ -5,6 +5,8 @@ class Params:
     def __init__(self, config_path, save_model):
         if save_model != 'False':
             self.save_model = True
+        else:
+            self.save_model = False
 
         with open(config_path, 'r') as file:
             self.model_config = yaml.safe_load(file)

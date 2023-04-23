@@ -120,7 +120,7 @@ class Tacotron2(nn.Module):
         self.n_mels = n_mels
         self.device = device
 
-        self.character_embedding = nn.Embedding(len(char_values), self.embedding_size)
+        self.character_embedding = nn.Embedding(len(char_values) + 2, self.embedding_size)
 
         self.conv_layers = nn.ModuleList([
             nn.Sequential(

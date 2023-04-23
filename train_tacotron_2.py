@@ -62,10 +62,11 @@ dataset = TextAudioDataset(
 )
 
 dataloader = DataLoader(
-        dataset, 
-        params.model['batch_size'], 
-        shuffle=params.train['shuffle'],
-        collate_fn=collate.MaxPad(labels_axis=0, values_axis=0)
+    dataset, 
+    params.model['batch_size'], 
+    shuffle=params.train['shuffle'],
+    collate_fn=collate.MaxPad(labels_axis=0, values_axis=0),
+    num_workers=params.train['num_workers']
 )
 
 model = Tacotron2(
@@ -134,6 +135,7 @@ def debug_memory():
             pass
     import ipdb; ipdb.sset_trace()
 
+torch.backends.cudnn.benchmark = True
 try:
     for epoch in range(params.train['epochs']):
         for i, (text, audio) in enumerate(dataloader):

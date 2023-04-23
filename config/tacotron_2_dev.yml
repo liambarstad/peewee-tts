@@ -13,6 +13,7 @@ train:
   source: local_directory
   root_dir: data
   shuffle: true
+  num_workers: 20
   beta_0: 0.9
   beta_1: 0.999
   eps: 0.000001
@@ -30,7 +31,7 @@ speaker_embedding_model:
   state_dict_uri: 'mlruns/622292915956719578/5cde163e56ee472eb8b1f4bcc4a10b38/artifacts/state_dict'
 
 model:
-  speaker_embedding_model_uri: models:/Speaker_Embedding_Test1/latest
+  speaker_embedding_model_uri: models:/Speaker_Embedding_v1/latest
   embedding_size: 512
   speaker_embedding_size: 256
   num_layers: [3, 2, 5]
@@ -45,7 +46,7 @@ model:
   decoder_lstm_hidden_size: 1024
   postnet_embedding_dim: 512
   postnet_kernel_size: 5
-  batch_size: 6
+  batch_size: 20
 
 meta: 
   mlflow_remote_tracking: false

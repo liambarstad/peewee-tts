@@ -2,9 +2,10 @@ import torch
 import numpy as np
 
 class MaxPad:
-    def __init__(self, labels_axis=None, values_axis=None):
+    def __init__(self, labels_axis=None, values_axis=None, min_val=1e-8):
         self.labels_axis = labels_axis
         self.values_axis = values_axis
+        self.min_val = min_val
 
     def __call__(self, batch):
         labels = [ b[0] for b in batch ]
@@ -22,7 +23,7 @@ class MaxPad:
             max_length = max([ x.shape[0] for x in data ])
             for i, sample in enumerate(data):
                 padding = np.zeros((max_length - sample.shape[0], *sample.shape[1:]))
-                data[i] = np.append(sample, padding, axis=0)
+                data[i] = np.append(sample+self.min_val, padding, axis=0)
             data = np.array(data)
             return data.reshape(*data_shape[:axis+1], *data.shape[axis+1:])
         else:

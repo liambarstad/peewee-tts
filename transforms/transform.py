@@ -21,6 +21,17 @@ class OneHotEncodeCharacters:
                 encoded = np.append(encoded, item.reshape(1, -1), axis=0)
         return encoded.astype(int)
 
+class ToOrdinal:
+    def __init__(self, char_values):
+        self.char_values = char_values
+
+    def __call__(self, data):
+        return np.array([
+            self.char_values.index(d.lower()) + 1
+            for d in data
+            if d in self.char_values
+        ], dtype=int)
+
 class ReduceNoise:
     def __init__(self,
                  sample_rate: int,
@@ -73,6 +84,24 @@ class MelSpec:
             n_mels=self.n_mels,
             window=self.window_function
         ))
+
+class InverseMelSpec:
+    def __init__(self, sample_rate, hop_length_ms, win_length_ms, window_function='hann'):
+        self.sample_rate = sample_rate
+        self.hop_length_ms = hop_length_ms
+        self.win_length_ms = win_length_ms
+        self.window_function = window_function
+
+    def __call__(self, mels):
+        win_length = math.floor((self.win_length_ms / 1000) * self.sample_rate)
+        hop_length = math.floor((self.hop_length_ms / 1000) * self.sample_rate) 
+        return librosa.feature.inverse.mel_to_audio(
+            M=mels,
+            sr=self.sample_rate,
+            win_length=win_length,
+            hop_length=hop_length,
+            window=self.window_function
+        )
 
 class ParsePartial:
     def __init__(self, t, indexof=0):

@@ -16,7 +16,7 @@ class Metrics:
         self.aggregates = {}
         print(f'{self._get_timestamp()} START RUN')
 
-    def add_step(self, values={}):
+    def add_step(self, values={}, round_num=10):
         timestamp = self._get_timestamp()
         for k in values:
             if k in self.data:
@@ -26,7 +26,11 @@ class Metrics:
         self.current_step += 1
         epoch = math.ceil(self.current_step / self.per_epoch)
         step = self.current_step % self.per_epoch if self.current_step % self.per_epoch > 0 else self.per_epoch
-        print(f'{timestamp} Step: {step}/{self.per_epoch}, Epoch: {epoch}/{self.epochs}')
+        metrics = ', '.join([ 
+            ': '.join([metric, str(round(self.data[metric][-1], round_num))]) 
+            for metric in self.data 
+        ])
+        print(f'{timestamp} Step: {step}/{self.per_epoch}, Epoch: {epoch}/{self.epochs}, {metrics}')
 
     def _get_timestamp(self):
         return f'[ {str(datetime.utcnow())} ]:'

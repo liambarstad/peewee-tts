@@ -1,19 +1,19 @@
-stft:
-  frame_size: 50
-  frame_hop_ms: 12.5
+mel:
+  sample_rate: 22050
+  hop_length_ms: 12.5
+  win_length_ms: 50
+  n_mels: 80
   window_function: 'hann'
 
-mel:
-  n_mels: 80
-  min_filterbank_hz: 125
-  max_filterbank_hz: 7600
-  magnitude_min_val: 0.01
+transforms:
+  char_values: "abcdefghijklmnopqrstuvwxyz1234567890 "
   
 train:
-  epochs: 100
-  source: aws_cloud
-  root_dir: /
+  epochs: 14 #25
+  source: local_directory
+  root_dir: ../../../../media/overlord/My Passport
   shuffle: true
+  num_workers: 20
   beta_0: 0.9
   beta_1: 0.999
   eps: 0.000001
@@ -21,16 +21,36 @@ train:
   lr_min: 0.00001
   decay_iterations: 50000
   l2_reg_weight: 0.000001
+  scheduler_gamma: 0.1
   repos:
     LibriTTS:
-      version: dev-clean
+      version: train-other-500
+  stop_token_threshold: 1.0
+  grad_clip_norm: 1.0
+
+speaker_embedding_model:
+  config_path: 'config/speaker_recog_encoder_prod.yml'
+  state_dict_uri: 'mlruns/622292915956719578/5cde163e56ee472eb8b1f4bcc4a10b38/artifacts/state_dict'
+  model_uri: models:/Speaker_Embedding_v1/latest
 
 model:
   embedding_size: 512
-  characters_window: 5
-  num_layers: [3, 2, 2, 5]
-  hidden_size: 256
-  batch_size: 64
+  speaker_embedding_size: 256
+  num_layers: [3, 2, 5]
+  encoder_conv_kernel_size: 5
+  lstm_hidden_size: 256
+  prenet_hidden_size: 256
+  encoder_lstm_hidden_size: 1024
+  location_hidden_dim: 128
+  location_n_filters: 32
+  location_kernel_size: 31
+  attn_inverse_temperature: 1.0
+  decoder_lstm_hidden_size: 1024
+  postnet_embedding_dim: 512
+  postnet_kernel_size: 5
+  batch_size: 15
 
 meta: 
-  mlflow_remote_tracking: true
+  mlflow_remote_tracking: false
+  cuda_gpu: 0
+

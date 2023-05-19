@@ -1,43 +1,48 @@
+import gc
+import torch
 import mlflow
-import yaml
 
-class Params:
-    def __init__(self, config_path, save_model):
-        if save_model != 'False':
-            self.save_model = True
-        else:
-            self.save_model = False
+def load_model(model_uri, model_location='cpu'):
+    model = mlflow.pytorch.load_model(
+        model_uri=model_uri,
+        map_location=torch.device(model_location)
+    )
+    if hasattr(model, 'device'):
+        model.device = 'cpu'
+    model.eval()
+    return model
 
-        with open(config_path, 'r') as file:
-            self.model_config = yaml.safe_load(file)
-            for section in self.model_config:
-                parameters = self.model_config[section]
-                setattr(self, section, parameters)
+def create_mask_matrix(audio):
+    mask_matrix = torch.rand(*audio.shape)#.to(audio.device)
+    for i, speaker in enumerate(audio):
+        for j, ts in enumerate(speaker):
+            if ts.sum() == 0.:
+                mask_matrix[i][j] = torch.ones(*ts.shape)
+            else:
+                mask_matrix[i][j] = torch.zeros(*ts.shape)
+    return mask_matrix == 1.
 
-    def save(self):
-        for section in self.model_config:
-            parameters = self.model_config[section]
-            for param in parameters:
-                mlflow.log_param(f'{section}_{param}', parameters[param])
-        print('PARAMETERS SAVED')
+def generate_stop_token_labels(mask_matrix, threshold):
+    token_labels = torch.masked_fill(mask_matrix.float(), (mask_matrix > 0.0), threshold)
+    end_col = torch.tensor([threshold])\
+        .expand(token_labels.shape[0], 1, token_labels.shape[-1])\
+        .to(token_labels.device)
+    token_labels = torch.cat((token_labels, end_col), dim=1).mean(dim=2)
+    return token_labels[:, 1:]
 
-class SpeakerCentroids:
-    def __init__(self, cks={}):
-        # computes the running centroids of each speaker
-        self.cks = cks
+memory_dict = []
+all_objs = []
 
-    def append_data(self, speaker_id, eji):
-        if speaker_id in self.cks:
-            speaker_id = str(speaker_id)
-            num_samples = self.cks[speaker_id][0]
-            total_weight = self.cks[speaker_id][1]
-            self.cks[speaker_id] = [ num_samples + 1, eji ]
-        else:
-            self.cks[str(speaker_id)] = [ 1, eji ]
-
-    def get_for_speaker(self, speaker_id):
-        speaker_id = str(speaker_id)
-        num_samples = self.cks[speaker_id][0]
-        total_weight = self.cks[speaker_id][1]
-        return total_weight / num_samples
-
+def debug_memory():
+    ind = len(memory_dict)
+    memory_dict.append([])
+    all_objs.append([])
+    for obj in gc.get_objects():
+        try:
+            if torch.is_tensor(obj) or (hasattr(obj, 'data') and torch.is_tensor(obj.data)):
+                memory_dict[ind].append([type(obj), obj.size()])
+            else:
+                all_objs[ind].append([type(obj), obj.size()])
+        except:
+            pass
+    import ipdb; ipdb.sset_trace()

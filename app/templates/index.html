@@ -1,0 +1,18 @@
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+
+<div id="main">
+    <div className="main-title">
+        Pee Wee Herman Text-To-Speech
+    </div>
+    <div className="sub-title">
+        You can't make me grow up
+    </div>
+
+    <div>
+        <form method="POST" action="/submit" onsubmit="submitQueryText(event)">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <label>Make Pee Wee Speak!</label>
+            <input type="textarea" id="input_text" placeholder="add text here" />
+        </form>
+    </div>
+</div>

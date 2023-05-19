@@ -12,8 +12,8 @@ dependencies:
   - cuda-libraries=11.8.0=0
   - cuda-nvrtc=11.8.89=0
   - cuda-nvtx=11.8.86=0
-  - cuda-runtime=11.8.0=0
-  - cudatoolkit=10.2.89=h713d32c_10
+  #- cuda-runtime=11.8.0=0
+  #- cudatoolkit=10.2.89=h713d32c_10
   #- cudnn=8.5.0_0
   - intel-openmp=2021.4.0=h06a4308_3561
   - libcublas=11.11.3.6=0

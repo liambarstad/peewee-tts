@@ -6,13 +6,13 @@ mel:
   window_function: 'hann'
 
 transforms:
-  char_values: "He lokdmavrfbutins,ghywcp;.WTIqDFGPx:EB-CARSMONLzjV\"?J91872U'()!K[]YZ3/4056XQ"
+  char_values: "abcdefghijklmnopqrstuvwxyz1234567890 "
   
 train:
-  epochs: 4
+  epochs: 1000
   source: local_directory
   root_dir: data
-  shuffle: true
+  shuffle: false
   num_workers: 20
   beta_0: 0.9
   beta_1: 0.999
@@ -21,17 +21,19 @@ train:
   lr_min: 0.00001
   decay_iterations: 50000
   l2_reg_weight: 0.000001
+  scheduler_gamma: 0.1
   repos:
     LibriTTS:
       version: dev-other
-  stop_token_threshold: 0.5
+  stop_token_threshold: 1.0
+  grad_clip_norm: 1.0
 
 speaker_embedding_model:
   config_path: 'config/speaker_recog_encoder_dev.yml'
   state_dict_uri: 'mlruns/622292915956719578/5cde163e56ee472eb8b1f4bcc4a10b38/artifacts/state_dict'
+  model_uri: models:/Speaker_Embedding_v1/latest
 
 model:
-  speaker_embedding_model_uri: models:/Speaker_Embedding_v1/latest
   embedding_size: 512
   speaker_embedding_size: 256
   num_layers: [3, 2, 5]
@@ -46,7 +48,7 @@ model:
   decoder_lstm_hidden_size: 1024
   postnet_embedding_dim: 512
   postnet_kernel_size: 5
-  batch_size: 20
+  batch_size: 5
 
 meta: 
   mlflow_remote_tracking: false

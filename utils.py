@@ -35,12 +35,12 @@ all_objs = []
 
 def debug_memory():
     ind = len(memory_dict)
-    memory_dict.append([])
+    memory_dict.append({})
     all_objs.append([])
     for obj in gc.get_objects():
         try:
             if torch.is_tensor(obj) or (hasattr(obj, 'data') and torch.is_tensor(obj.data)):
-                memory_dict[ind].append([type(obj), obj.size()])
+                memory_dict[ind][obj.data_ptr()] = obj.element_size() * obj.nelement()
             else:
                 all_objs[ind].append([type(obj), obj.size()])
         except:

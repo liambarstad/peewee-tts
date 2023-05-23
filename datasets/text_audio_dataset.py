@@ -13,15 +13,23 @@ class TextAudioDataset(Dataset):
                     'text': [],
                     'audio': []
                  },
-                 num_samples=None
+                 num_samples=None,
+                 speaker=None,
+                 chapter=None
                 ):
         super().__init__(source, root_dir)
         self.transform = transform
-        self.paths = pd.DataFrame([], columns=['dataset', 'speaker', 'text_path', 'audio_path'])
+        self.paths = pd.DataFrame([], columns=['dataset', 'speaker', 'chapter', 'text_path', 'audio_path'])
 
         if 'LibriTTS' in repos:
             self._load_libritts(repos['LibriTTS'])
         
+        if speaker and chapter:
+            self.paths = self.paths[
+                (self.paths.speaker == speaker) & 
+                (self.paths.chapter == chapter)
+            ]
+
         if num_samples:
             self.paths = self.paths.sample(n=num_samples)
             for p in self.paths.audio_path.values:
@@ -35,6 +43,7 @@ class TextAudioDataset(Dataset):
         paths_to_add = pd.DataFrame({
             'dataset': ['LibriTTS']*len(f_roots),
             'speaker': f_roots.str.split('/').str[-1].str.split('_').str[0],
+            'chapter': f_roots.str.split('/').str[-1].str.split('_').str[1],
             'text_path': f_roots+'.normalized.txt',
             'audio_path': f_roots+'.wav'
         })

@@ -17,4 +17,4 @@ inverse_mel:
   window_function: 'hann'
 
 train:
-  char_values: "abcdefghijklmnopqrstuvwxyz1234567890 "
+  char_values: "abcdefghijklmnopqrstuvwxyz1234567890?!, "

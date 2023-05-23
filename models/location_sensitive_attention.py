@@ -54,10 +54,9 @@ class LocationSensitiveAttention(nn.Module):
             w_init_gain='tanh'
         )
 
-        self.b = nn.Parameter(torch.rand(self.attention_dim).uniform_(-0.1, 0.1))
+        #self.b = nn.Parameter(torch.rand(self.attention_dim).uniform_(-0.1, 0.1))
 
     def forward(self, query, values, attn_weights, attn_cum):
-        # expects mask to be (batch_sz,) w/ one value per frame
         location_sensitive_input = torch.cat((attn_weights.unsqueeze(1), attn_cum.unsqueeze(1)), dim=1)
         conv_output = self.location_conv(location_sensitive_input)
         location_alignment = self.location_linear(conv_output.transpose(1, 2))
@@ -66,7 +65,7 @@ class LocationSensitiveAttention(nn.Module):
             self.query_layer(query.unsqueeze(1))
             + self.value_layer(values)
             + location_alignment
-            + self.b
+            #+ self.b
         )).squeeze(2)
 
         attn = F.softmax(self.inverse_temperature*scores, dim=1)

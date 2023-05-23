@@ -6,14 +6,14 @@ mel:
   window_function: 'hann'
 
 transforms:
-  char_values: "abcdefghijklmnopqrstuvwxyz1234567890 "
+  char_values: "abcdefghijklmnopqrstuvwxyz1234567890?!, "
   
 train:
-  epochs: 14 #25
+  epochs: 16
   source: local_directory
   root_dir: ../../../../media/overlord/My Passport
   shuffle: true
-  num_workers: 20
+  num_workers: 5
   beta_0: 0.9
   beta_1: 0.999
   eps: 0.000001
@@ -48,7 +48,7 @@ model:
   decoder_lstm_hidden_size: 1024
   postnet_embedding_dim: 512
   postnet_kernel_size: 5
-  batch_size: 15
+  batch_size: 16
 
 meta: 
   mlflow_remote_tracking: false

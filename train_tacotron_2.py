@@ -14,7 +14,7 @@ from transforms import transform
 from utils import load_model, create_mask_matrix, generate_stop_token_labels
 from metrics.metrics import Metrics
 
-parser = argparse.ArgumentParser(description='Trains the speaker recognition encoder, generating embeddings for different speakers')
+parser = argparse.ArgumentParser(description='Trains Tacotron 2, utilizing a saved model to generate a speaker encoding')
 parser.add_argument('--config-path', type=str, help='path to config .yml file')
 parser.add_argument('--save-model', type=str, help='whether or not to save the model')
 parser.set_defaults(save_model='False')
@@ -51,8 +51,7 @@ dataset = TextAudioDataset(
         'audio': [
             transform.MelSpec(**params.mel)
         ]
-    },
-    num_samples=5
+    }
 )
 
 dataloader = DataLoader(
@@ -77,7 +76,7 @@ optimizer = torch.optim.Adam(
     lr=params.train['lr_max'],
     betas=(params.train['beta_0'], params.train['beta_1']), 
     eps=params.train['eps'],
-    #weight_decay=params.train['l2_reg_weight']
+    weight_decay=params.train['l2_reg_weight']
 )
 
 scheduler = torch.optim.lr_scheduler.ExponentialLR(
@@ -100,9 +99,11 @@ try:
             mask_matrix = create_mask_matrix(audio)
             stop_token_mask = (torch.sum(mask_matrix, dim=2) > 0)
             speaker_embeddings = sp_lstm_encoder(audio)
+            #speaker_embeddings = torch.zeros(audio.shape[0], 1)
 
+            print(audio.shape[1])
             before_postnet_preds, after_postnet_preds, stop_token_preds = model(
-                text.int().to(device), 
+                text.to(device), 
                 speaker_embeddings.to(device),
                 audio.to(device)
             )
@@ -115,9 +116,10 @@ try:
 
             before_postnet_loss = nn.MSELoss()(before_postnet_preds, audio.to(torch.float32))
             after_postnet_loss = nn.MSELoss()(after_postnet_preds, audio.to(torch.float32))
+            after_postnet_l1 = nn.L1Loss()(after_postnet_preds, audio.to(torch.float32))
             stop_token_loss = nn.BCELoss()(stop_token_preds, stop_token_labels)
 
-            (before_postnet_loss + after_postnet_loss + stop_token_loss).backward()
+            (before_postnet_loss + after_postnet_loss + after_postnet_l1 + stop_token_loss).backward()
 
             torch.nn.utils.clip_grad_norm_(
                 model.parameters(), params.train['grad_clip_norm']
@@ -142,12 +144,14 @@ try:
                 metrics.add_step({
                     'before_loss': before_postnet_loss.item(),
                     'after_loss': after_postnet_loss.item(),
+                    'after_l1_loss': after_postnet_l1.item(),
                     'stop_token_loss': stop_token_loss.item(),
                     'correct_sts_neg': correct_sts_neg,
                     'correct_sts_pos': correct_sts_pos,
                     'stop_val_diff': stop_diff / stop_token_preds.shape[0]
                 }, round_num=4)
 
+            #from utils import debug_memory; debug_memory()
             iteration_count += 1
         
         if iteration_count >= params.train['decay_iterations'] * (64 / params.model['batch_size']):
@@ -156,6 +160,7 @@ try:
 
         metrics.agg_epoch('before_loss', mean)
         metrics.agg_epoch('after_loss', mean)
+        metrics.agg_epoch('after_l1_loss', mean)
         metrics.agg_epoch('stop_token_loss', mean)
         metrics.agg_epoch('correct_sts_neg', mean)
         metrics.agg_epoch('correct_sts_pos', mean)

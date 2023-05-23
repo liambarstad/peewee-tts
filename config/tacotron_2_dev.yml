@@ -6,13 +6,13 @@ mel:
   window_function: 'hann'
 
 transforms:
-  char_values: "abcdefghijklmnopqrstuvwxyz1234567890 "
+  char_values: "abcdefghijklmnopqrstuvwxyz1234567890?!, "
   
 train:
-  epochs: 1000
+  epochs: 1
   source: local_directory
   root_dir: data
-  shuffle: false
+  shuffle: true
   num_workers: 20
   beta_0: 0.9
   beta_1: 0.999
@@ -48,7 +48,7 @@ model:
   decoder_lstm_hidden_size: 1024
   postnet_embedding_dim: 512
   postnet_kernel_size: 5
-  batch_size: 5
+  batch_size: 20
 
 meta: 
   mlflow_remote_tracking: false

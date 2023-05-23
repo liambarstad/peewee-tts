@@ -56,7 +56,8 @@ class Postnet(nn.Module):
                     in_channels=embedding_dim,
                     out_channels=input_dim,
                     kernel_size=kernel_size,
-                    padding=int((kernel_size - 1) / 2)
+                    padding=int((kernel_size - 1) / 2),
+                    w_init_gain='linear'
                 ), nn.BatchNorm1d(input_dim)
             )
         )
@@ -66,7 +67,7 @@ class Postnet(nn.Module):
             x = layer(x)
             if i != len(self.layers) - 1:
                 x = F.tanh(x)
-            x = F.dropout(x, p=0.5, training=True)
+            x = F.dropout(x, 0.5, self.training)
         return x
 
 class Tacotron2(nn.Module):
@@ -119,7 +120,8 @@ class Tacotron2(nn.Module):
                     in_channels=self.embedding_size, 
                     out_channels=self.embedding_size,
                     kernel_size=self.encoder_conv_kernel_size,
-                    padding=int((self.encoder_conv_kernel_size - 1) / 2) 
+                    padding=int((self.encoder_conv_kernel_size - 1) / 2),
+                    w_init_gain='relu'
                 ), nn.BatchNorm1d(self.embedding_size)
             ) for _ in range(self.num_conv_layers)
         ])
@@ -128,7 +130,8 @@ class Tacotron2(nn.Module):
             input_size=self.embedding_size,
             hidden_size=self.lstm_hidden_size,
             num_layers=1,
-            bidirectional=True
+            bidirectional=True,
+            batch_first=True
         )
 
         self.prenet = Prenet(self.n_mels, self.prenet_hidden_size, self.num_prenet_layers)
@@ -158,7 +161,7 @@ class Tacotron2(nn.Module):
 
         self.stop_token_projection = LinearNorm(
             self.decoder_lstm_hidden_size + self.embedding_size + self.speaker_embedding_size, 
-            1, bias=True
+            1, bias=True, w_init_gain='sigmoid'
         )
 
         self.postnet = Postnet(
@@ -182,7 +185,7 @@ class Tacotron2(nn.Module):
         x = x.transpose(1, 2)
         for conv in self.conv_layers:
             x = F.relu(conv(x))
-            x = F.dropout(x, p=0.5, training=True)
+            x = F.dropout(x, 0.5, self.training)
         x = x.transpose(1, 2)
         self.bidirectional_lstm.flatten_parameters()
         x, _ = self.bidirectional_lstm(x)
@@ -195,13 +198,13 @@ class Tacotron2(nn.Module):
         stop_token_predictions = torch.zeros((audio.shape[0], audio.shape[1]))
 
         first_frame = torch.zeros(audio.shape[0], 1, audio.shape[2]).to(self.device)
-        audio_input = torch.cat((first_frame, audio), dim=1)[:, :-1, :]
-        prenet_output = self.prenet(audio_input.float())
+        audio_input = torch.cat((first_frame, audio), dim=1)[:, :-1, :].to(torch.float32)
+        prenet_output = self.prenet(audio_input)
         training_values = self._get_init_training_values(text_embedding)
 
         for time_step_ind in range(prenet_output.shape[1]):
-            input_frame = prenet_output[:, time_step_ind, :]
-            decoder_output, training_values = self.decode_frame(input_frame, text_embedding, training_values)
+            prenet_embeds = prenet_output[:, time_step_ind, :]
+            decoder_output, training_values = self.decode_frame(prenet_embeds, text_embedding, training_values)
 
             attention_context = training_values[0]
             stop_token_prediction, mel_prediction, mel_prediction_residual = self.predict_frame(decoder_output, attention_context)
@@ -215,18 +218,22 @@ class Tacotron2(nn.Module):
     def inference(self, text_embedding, max_length=5000, threshold=0.5, **kwargs):
         with torch.no_grad():
             prediction_frames = torch.tensor([])
+            residual_frames = torch.tensor([])
             stop_token = 0.0
             training_values = self._get_init_training_values(text_embedding)
             input_frame = torch.zeros(text_embedding.shape[0], 1, self.n_mels)
             while stop_token < threshold and (prediction_frames.shape[0] == 0 or prediction_frames.shape[1] < max_length):
                 prenet_embeds = self.prenet(input_frame)
                 decoder_output, training_values = self.decode_frame(prenet_embeds.squeeze(1), text_embedding, training_values)
+
                 attention_context = training_values[0]
-                stop_token_prediction, _, input_frame = self.predict_frame(decoder_output, attention_context) 
+                stop_token_prediction, mel_prediction, mel_residual = self.predict_frame(decoder_output, attention_context) 
+
                 stop_token = stop_token_prediction.item()
-                input_frame = input_frame.transpose(1, 2)
+                input_frame = mel_prediction.unsqueeze(1)
                 prediction_frames = torch.cat((prediction_frames, input_frame), dim=1)
-            return prediction_frames
+                residual_frames = torch.cat((residual_frames, mel_residual.transpose(1, 2)), dim=1)
+            return prediction_frames + residual_frames
 
     def decode_frame(self, input_frame, text_embedding, training_values):
         attention_context, enc_lstm_hidden, enc_lstm_cell, dec_lstm_hidden, dec_lstm_cell, attention_weights, attention_weights_cum = training_values

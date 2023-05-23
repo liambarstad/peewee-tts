@@ -32,7 +32,7 @@ class MaxPad:
     def _estimate_data_shape(self, data):
         shape = []
         subset = data.copy()
-        while hasattr(subset, '__iter__'):
+        while hasattr(subset, '__len__'):
             shape.append(len(subset))
             subset = subset[0]
         return tuple(shape)

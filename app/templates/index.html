@@ -1,18 +1,26 @@
-<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+<html>
+    <head>
+        <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/styles.css') }}">
+        <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    </head>
+    <body>
+        <div id="main", style="background-image: url('{{ url_for('static', filename='peewee_background.jpg') }}')">
+            <div class="main-title">
+                Pee Wee Herman Text-To-Speech
+            </div>
+            <div class="main-content">
+                <div>
+                    <form id="peewee-form" method="POST" action="/submit" onsubmit="submitQueryText(event)">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                        <textarea name="input_text" id="input-text" placeholder="Add Text Here (100 characters max)" oninput="validateInput(event)"></textarea>
+                        <button id="speak-btn" disabled>Make Pee Wee Speak!</button>
+                    </form>
+                </div>
 
-<div id="main">
-    <div className="main-title">
-        Pee Wee Herman Text-To-Speech
-    </div>
-    <div className="sub-title">
-        You can't make me grow up
-    </div>
-
-    <div>
-        <form method="POST" action="/submit" onsubmit="submitQueryText(event)">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-            <label>Make Pee Wee Speak!</label>
-            <input type="textarea" id="input_text" placeholder="add text here" />
-        </form>
-    </div>
-</div>
+                <div class="description-paragraph">
+                    This text-to-speech generator is a passion project created as a capstone submission for the UCSD machine learning bootcamp in association with Springboard. It is intended to be used for no other purpose besides nonsense and lolligagging.
+                </div>
+            </div>
+        </div>
+    </body>
+</html>

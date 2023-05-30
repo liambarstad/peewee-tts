@@ -29,7 +29,7 @@ class ToOrdinal:
         return np.array([
             self.char_values.index(d.lower()) + 1
             for d in data
-            if d in self.char_values
+            if d.lower() in self.char_values
         ], dtype=int)
 
 class ReduceNoise:

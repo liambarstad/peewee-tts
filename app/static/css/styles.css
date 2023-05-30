@@ -1,0 +1,74 @@
+body {
+    margin: 0;
+}
+
+#main { 
+    height: 100%;
+    width: 100%;
+}
+
+.main-title {
+    font-size: 35px;
+    text-align: center;
+    padding: 20px;
+    color: white;
+    background-color: purple;
+}
+
+.main-content {
+    background-color: rgba(128, 0, 128, 0.4);
+    width: 600px;
+    margin: auto;
+    margin-top: 5%;
+    padding: 3%;
+}
+
+#speak-btn {
+    display: block;
+    cursor: pointer;
+    margin: auto;
+    background-color: white;
+    text-decoration: none;
+    text-shadow: none;
+    border-style: solid;
+    border-color: black;
+    border-width: 1px;
+    border-radius: 2em;
+    padding: 10px 15px;
+    font-size: 15px;
+    margin-top: 15px;
+}
+
+#peewee-form {
+    text-align: center;
+}
+
+#input-text {
+    background-color: rgba(0, 0, 0, 0.4);
+    border-style: solid;
+    color: white;
+    border-color: white;
+    border-width: 0px 0px 0.5px 0px;
+    width: 80%;
+    height: 100px;
+}
+
+#input-text::placeholder {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.description-paragraph {
+    color: white;
+    background-color: rgba(0, 0, 0, 0.4);
+    margin: 20px;
+    padding: 10px;
+}
+
+#audio-playback {
+    margin-top: 15px;
+}
+
+#audio-error {
+    color: red;
+    background-color: purple;
+}

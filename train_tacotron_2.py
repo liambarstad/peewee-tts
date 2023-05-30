@@ -93,7 +93,6 @@ sp_lstm_encoder = load_model(params.speaker_embedding_model['model_uri'], 'cpu')
 try:
     for epoch in range(params.train['epochs']):
         for i, (text, audio) in enumerate(dataloader):
-
             optimizer.zero_grad()
             # teacher forcing takes audio as input
             mask_matrix = create_mask_matrix(audio)
@@ -101,7 +100,6 @@ try:
             speaker_embeddings = sp_lstm_encoder(audio)
             #speaker_embeddings = torch.zeros(audio.shape[0], 1)
 
-            print(audio.shape[1])
             before_postnet_preds, after_postnet_preds, stop_token_preds = model(
                 text.to(device), 
                 speaker_embeddings.to(device),

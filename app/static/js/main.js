@@ -9,6 +9,12 @@ function submitQueryText(event) {
 
     const existingError = document.getElementById('audio-error')
     if (existingError) { existingError.remove() }
+
+    const loadingContainer = document.getElementById('loading-icon-container')
+    loadingContainer.classList.add('loading')
+
+    const speakBtn = document.getElementById('speak-btn')
+    speakBtn.disabled = true
   
     fetch(url, {
       method: 'POST',
@@ -36,6 +42,8 @@ function submitQueryText(event) {
       errorElement.innerText = 'Sorry, something went wrong. Please try again later or email business@liambarstad.com'
       peeWeeForm.insertBefore(errorElement, buttonEl)
     }
+    const loadingContainer = document.getElementById('loading-icon-container')
+    loadingContainer.classList.remove('loading')
   }
 
   function validateInput(event) {

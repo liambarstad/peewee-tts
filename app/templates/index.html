@@ -9,6 +9,9 @@
                 Pee Wee Herman Text-To-Speech
             </div>
             <div class="main-content">
+                <div id="loading-icon-container">
+                    <img src="{{ url_for('static', filename='loading-icon.gif')}}" id="loading-icon">
+                </div>
                 <div>
                     <form id="peewee-form" method="POST" action="/submit" onsubmit="submitQueryText(event)">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>

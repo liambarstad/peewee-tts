@@ -1,21 +1,28 @@
-FROM ubuntu:22.04
+# Stage 1: Build stage
+FROM python:3.8 AS builder
 
-ARG DEBIAN_FRONTEND=noninteractive
+WORKDIR /build
 
+# Copy only necessary files
+COPY app/ app/
+COPY params.py .
+COPY predict.py .
+COPY config/predict.yml config/predict.yml
+COPY transforms/transform.py transforms/transform.py
+
+# Stage 2: Final stage
+FROM python:3.8
+LABEL maintainer="Liam Barstad"
+
+#WORKDIR /opt
+
+# Copy files from the builder stage
+COPY --from=builder build/ .
+
+# Install production dependencies
+RUN pip install --no-cache-dir -r app/requirements.txt
+RUN ls -la
+
+# Set the entry point and expose the port
 EXPOSE 8080
-
-ADD app/* opt/app/
-ADD params.py predict.py opt/
-ADD config/predict.yml opt/config/predict.yml
-ADD transforms/transform.py opt/transforms/transform.py
-
-RUN apt-get update && \
-    apt install -y software-properties-common && \
-    add-apt-repository -y ppa:deadsnakes/ppa && \
-    apt-get install -y python3.8 python3-pip
-
-WORKDIR /opt
-
-RUN pip3 install -r app/requirements.txt
-
-ENTRYPOINT python3 app/app.py
+CMD ["python", "app/app.py"]

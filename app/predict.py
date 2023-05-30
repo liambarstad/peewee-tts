@@ -1,9 +1,7 @@
 import librosa
 import torch
-from params import Params
-from transforms import transform
+import transform
 
-config = Params('config/predict.yml')
 melspec = transform.MelSpec(**config.mel)
 text_ordinal = transform.ToOrdinal(config.train['char_values'])
 vocoder = transform.InverseMelSpec(**config.inverse_mel)

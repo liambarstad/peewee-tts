@@ -86,11 +86,18 @@ class MelSpec:
         ))
 
 class InverseMelSpec:
-    def __init__(self, sample_rate, hop_length_ms, win_length_ms, window_function='hann'):
+    def __init__(self, 
+                 sample_rate: int, 
+                 hop_length_ms: int, 
+                 win_length_ms: int, 
+                 window_function='hann',
+                 n_fft=2048
+                 ):
         self.sample_rate = sample_rate
         self.hop_length_ms = hop_length_ms
         self.win_length_ms = win_length_ms
         self.window_function = window_function
+        self.n_fft = n_fft
 
     def __call__(self, mels):
         win_length = math.floor((self.win_length_ms / 1000) * self.sample_rate)
@@ -100,6 +107,7 @@ class InverseMelSpec:
             sr=self.sample_rate,
             win_length=win_length,
             hop_length=hop_length,
+            n_fft=self.n_fft,
             window=self.window_function
         )
 

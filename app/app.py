@@ -17,9 +17,9 @@ sp_encoder = load_model('peewee-tts-models', 'speaker_embedding_model.pth')
 tt2_model = load_model('peewee-tts-models', 'tacotron_2_model.pth')
 
 sp_embeds = predict.get_speaker_embedding(sp_encoder, [
-    'app/static/pee_wee_ba_25.wav',
-    'app/static/pee_wee_ba_51.wav',
-    'app/static/pee_wee_ba_62.wav'
+    'static/pee_wee_ba_25.wav',
+    'static/pee_wee_ba_51.wav',
+    'static/pee_wee_ba_62.wav'
 ])
 
 @app.route('/', methods=['GET'])
@@ -34,7 +34,7 @@ def submit():
     if len(input_text) > 100:
         return '', 414
     prediction = predict.predict(input_text, sp_embeds, tt2_model)
-    sf.write('app/temp/query.wav', prediction, 22050)
+    sf.write('temp/query.wav', prediction, 22050)
     return send_file('temp/query.wav', mimetype='audio/wav')
 
 if __name__ == '__main__':

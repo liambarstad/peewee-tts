@@ -1,10 +1,9 @@
 import io
-import os
 import torch
 from google.cloud import storage
 
 def load_model(bucket_name, blob_name):
-    storage_client = storage.Client(os.environ['GOOGLE_APPLICATION_CREDENTIALS'])
+    storage_client = storage.Client()
     bucket = storage_client.get_bucket(bucket_name)
     blob = bucket.blob(blob_name)
 

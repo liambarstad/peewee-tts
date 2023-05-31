@@ -2,9 +2,16 @@ import librosa
 import torch
 import transform
 
-melspec = transform.MelSpec(**config.mel)
-text_ordinal = transform.ToOrdinal(config.train['char_values'])
-vocoder = transform.InverseMelSpec(**config.inverse_mel)
+mel_params = {
+    'sample_rate': 22050,
+    'hop_length_ms': 12.5,
+    'win_length_ms': 50,
+    'window_function': 'hann'
+}
+
+melspec = transform.MelSpec(**mel_params, n_mels=80)
+text_ordinal = transform.ToOrdinal('abcdefghijklmnopqrstuvwxyz1234567890?!, ')
+vocoder = transform.InverseMelSpec(**mel_params)
 
 def get_speaker_embedding(sp_encoder, sp_files):
     speaker_embeddings = []

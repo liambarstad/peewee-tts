@@ -8,6 +8,7 @@ melspec = transform.MelSpec(**config.mel)
 text_ordinal = transform.ToOrdinal(config.train['char_values'])
 vocoder = transform.InverseMelSpec(**config.inverse_mel)
 
+#def load_model(source)
 def get_speaker_embedding(sp_encoder, sp_files):
     speaker_embeddings = []
     for sp_file in sp_files:

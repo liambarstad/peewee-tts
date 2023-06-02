@@ -1,10 +1,8 @@
-import sys
 import os
-import librosa
+import soundfile as sf
 from flask import Flask, render_template, request, send_file
 from flask_wtf.csrf import CSRFProtect
 from utils import load_model
-import soundfile as sf
 import predict
 
 app = Flask(__name__, static_url_path='/static')
@@ -38,4 +36,4 @@ def submit():
     return send_file('temp/query.wav', mimetype='audio/wav')
 
 if __name__ == '__main__':
-    app.run(port=8080)
+    app.run(host='0.0.0.0', port=8080)
